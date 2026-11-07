@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Mokel R1 Browser Bridge",
+  "name": "0.1.0",
   "version": "0.8.18",
   "description": "Connect one chosen AI chat tab to Mokel R1.",
   "permissions": [
@@ -38,3 +38,4 @@
     "default_popup": "popup.html"
   }
 }
+
