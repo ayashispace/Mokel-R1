@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080808">
+<meta name="description" content="Mokel R1 is your space to chat. Bring your own AI, keep your conversations, and make room for your next idea.">
+<title>Mokel R1</title>
+<link rel="icon" type="image/jpeg" href="/mokel-r1-logo.jpeg">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/generator.css">
+<link rel="stylesheet" href="/providers.css">
+<link rel="stylesheet" href="/settings.css">
+<link rel="stylesheet" href="/modes.css">
+<link rel="stylesheet" href="/replies.css">
+<link rel="stylesheet" href="/live-view.css">
+<script src="/vendor/lucide.min.js" defer></script>
+<script type="module" src="/app.js"></script>
+</head>
+<body>
+<div class="workspace">
+<aside class="sidebar" id="sidebar" aria-label="Your chats">
+<div class="sidebar-brand"><a class="brand" href="/" aria-label="Mokel R1 home"><span class="brand-mark"><i data-lucide="message-square"></i></span><span>Mokel R1<span class="brand-dot">.</span></span></a><button class="icon-button close-sidebar" aria-label="Close sidebar" data-action="sidebar-close"><i data-lucide="x"></i></button></div>
+<button class="sidebar-new" data-action="new-chat"><i data-lucide="plus"></i><span>New chat</span><span class="new-arrow">↗</span></button>
+<div class="chat-search"><i data-lucide="search"></i><input id="chat-search" aria-label="Search chats" placeholder="Search your chats" autocomplete="off"></div>
+<div class="sidebar-section">YOUR CHATS <span id="chat-count">0</span></div>
+<nav class="chat-nav" id="chat-nav" aria-label="Chats in this visit"><p class="sidebar-empty">Your next idea starts here.</p></nav>
+<div class="sidebar-bottom"><button class="connection-card" data-action="providers"><span class="connection-indicator"><i data-lucide="key-round"></i></span><span><strong id="connection-title">Connect your AI</strong><small>Manage your API keys</small></span><i data-lucide="settings-2"></i></button><p class="storage-note"><i data-lucide="lock"></i>Save a chat file to keep it</p></div>
+</aside>
+<button class="sidebar-overlay" id="sidebar-overlay" aria-label="Close sidebar" data-action="sidebar-close" hidden></button>
+<div class="chat-app">
+<div id="website-connecting" hidden role="status" aria-live="polite"><span class="connecting-ring"></span><strong>Connecting your website…</strong><small>Complete any confirmation in your browser.</small></div>
+<header class="header">
+<div class="chat-heading"><button class="icon-button mobile-menu" aria-label="Collapse sidebar" aria-controls="sidebar" aria-expanded="true" data-action="sidebar-toggle"><i data-lucide="panel-left"></i></button><div><strong id="chat-title">New chat</strong><button class="model-picker-trigger" data-action="models" aria-label="Choose model"><span id="current-model">Choose your model</span><i data-lucide="chevron-down"></i></button></div><button class="pc-chip" id="pc-toggle" aria-label="Use my PC in this chat" aria-pressed="false" data-action="pc-toggle"><i data-lucide="monitor"></i><span>Use my PC</span></button></div>
+<div class="header-actions"><button class="icon-button settings-button" data-action="settings" aria-label="Settings" title="Settings"><i data-lucide="settings"></i></button><button class="icon-button chat-files-button" data-action="chat-files" aria-label="Save or load workspace" title="Save / Load workspace"><i data-lucide="folder-clock"></i></button><button class="icon-button utility" data-action="about" aria-label="About Mokel R1" title="About Mokel R1"><i data-lucide="info"></i></button><button class="api-status" id="status-button" data-action="providers"><span></span><b>Connect AI</b></button></div>
+</header>
+<main class="main">
+<section id="external-website" hidden><h2>Continue on <strong>your website</strong></h2><p>Your original website tab is connected to Mokel R1. Type there; review its PC proposals below.</p><button class="button primary" data-action="native-open">Open connected website</button><button class="button" data-action="agent-save">Save connection</button><p class="small-note">Keep this Mokel R1 tab open while using PC actions.</p></section>
+<section id="embedded-website" hidden aria-label="Embedded website"></section>
+<section id="native-pc-panel" hidden aria-label="Website PC Use"></section>
+<section class="conversation" id="conversation" aria-label="Conversation">
+<div class="empty-state" id="empty-state"><div class="hero-symbol"><i data-lucide="message-square"></i><span class="hero-dot"></span></div><p class="eyebrow">A CLEAR SPACE. A FRESH CONVERSATION.</p><h1>Start with a thought.</h1><p class="intro">A question, an idea, a little context.<br>Let’s see where it goes.</p><div class="starter-actions"><button data-action="write"><i data-lucide="message-square"></i><span>Write a message</span><i data-lucide="arrow-up-right"></i></button><button data-action="attach"><i data-lucide="paperclip"></i><span>Attach a file</span><i data-lucide="arrow-up-right"></i></button><button data-action="voice"><i data-lucide="audio-lines"></i><span>Use your voice</span><i data-lucide="arrow-up-right"></i></button></div><div class="empty-note"><span></span>Your model. Your space. A fresh start every visit.<span></span></div></div>
+<div class="message-list" id="message-list" role="log" aria-label="Chat messages" aria-live="polite" hidden></div>
+</section>
+<div class="compose-area"><div id="queued-messages" class="destination-label" role="status" hidden></div><div class="chat-configuration"><button class="button" data-action="chat-prompt"><i data-lucide="file-text"></i><span id="chat-prompt-label">Chat system prompt</span></button><button class="button" data-action="pc"><i data-lucide="folder-open"></i><span id="workspace-change">Connect PC &amp; workspace</span></button><button class="button" id="workspace-initialize" data-action="initialize-workspace" title="Prepare a temporary workspace attachment in memory and send it to the selected model" hidden>Initialize</button><span id="workspace-label" class="small-note">No workspace selected</span></div><div id="notice" class="notice" role="status" hidden></div><div class="destination-label" id="destination">A little space for your next big thought.</div><form class="composer" id="composer"><div id="attachments" class="attachment-list" hidden></div><div id="voice-panel" class="voice-panel" hidden><div><span class="recording-dot"></span><strong>Listening…</strong><button type="button" data-action="voice-stop">Stop recording</button></div><p id="voice-transcript">Say what’s on your mind.</p></div><label class="sr-only" for="message-input">Message</label><textarea id="message-input" rows="1" placeholder="What’s on your mind?" maxlength="60000"></textarea><div class="composer-tools"><button type="button" class="attach-button" data-action="attach"><i data-lucide="paperclip"></i><span>Add files</span></button><span id="composer-approval-slot"></span><div class="right-tools"><span class="voice-hint">Or just say it</span><button type="button" class="icon-button mic-button" aria-label="Start voice typing" aria-pressed="false" data-action="voice"><i data-lucide="mic"></i></button><span class="tool-divider"></span><button class="send-button" type="submit" aria-label="Send message" disabled><i data-lucide="arrow-up"></i></button></div></div></form><div class="composer-footer"><span>Save your workspace with Save / Load. AI can make mistakes.</span><span class="keyboard-note"><kbd>Enter</kbd> send<span>·</span><kbd>Shift + Enter</kbd> new line</span></div></div>
+</main>
+</div>
+</div>
+<input type="file" id="chat-file-input" accept=".zip,application/zip,.json,application/json" hidden aria-label="Load a Mokel R1 chat file">
+<input type="file" id="file-input" multiple hidden aria-label="Choose files">
+<dialog id="modal" class="modal"><div id="modal-content"></div></dialog>
+<div class="toast" id="toast" role="status" hidden></div>
+</body></html>

@@ -1,0 +1,6 @@
+data/
+companion/workspace/
+companion/.token
+*.log
+tests/.preview-*/
+

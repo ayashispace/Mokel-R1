@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {runningR1} from '../scripts/start-r1.mjs';
+test('launcher recognizes only a responding R1 server',async()=>{assert.equal(await runningR1(async()=>new Response('<title>Mokel R1 — your space to chat</title>')),true);assert.equal(await runningR1(async()=>new Response('<title>Another project</title>')),false);assert.equal(await runningR1(async()=>{throw Error('offline')}),false);assert.equal(await runningR1(async()=>new Response('Mokel R1',{status:500})),false);});

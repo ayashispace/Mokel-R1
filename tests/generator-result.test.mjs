@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {generatorResult} from '../dist/generator-result.js';
+test('generated prompt starts collapsed without rendering its Markdown',()=>{const html=generatorResult({id:'a',text:'## Role\n**Create** an image.'});assert.match(html,/Your prompt is ready/);assert.match(html,/aria-expanded="false"/);assert.doesNotMatch(html,/## Role|<h2>|<strong>/);});
+test('View shows escaped raw Markdown and preserves line breaks',()=>{const html=generatorResult({id:'b',text:'## Role\n<script>alert(1)</script>',generatorExpanded:true});assert.match(html,/aria-expanded="true"/);assert.match(html,/## Role\n&lt;script&gt;/);assert.doesNotMatch(html,/<script>/);});
+test('partial prompt is labelled honestly and empty output has no card',()=>{assert.match(generatorResult({id:'c',text:'Partial',generatorPartial:true}),/Partial prompt available/);assert.equal(generatorResult({text:''}),'');});

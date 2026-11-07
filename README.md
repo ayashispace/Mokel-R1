@@ -1,35 +1,31 @@
 # Mokel R1
 
-**Mokel R1 connects AI models and supported AI chat websites to workspaces where you can build and manage projects.**
+Mokel R1 brings AI provider APIs and supported AI chat websites into a project workspace. This repository contains the web application source, the Browser Bridge extension, and the optional Windows companion.
 
-- **Web app:** Free — **₦0**. The public hosted link will be posted here when the web release is available.
-- **Desktop and mobile apps:** Planned as paid, one-time, platform-specific licenses. Prices will be announced before release.
+## Run locally
 
-## What Mokel R1 does
+Requirements: Node.js 22.13 or newer. For document attachment extraction, install the packages in `requirements.txt` into Python and set `MOKEL_PYTHON` to that interpreter. Start the app with `npm start` or `Start Mokel R1.bat`; then open `http://127.0.0.1:4173`.
 
-Use the AI service that fits your task, then work with it in a project-focused workspace:
+The app is a local single-user service. It stores encrypted provider settings under `data/` and binds to loopback by default. Do not expose it directly as a multi-user public service: user isolation, persistent shared storage, deployment secrets, and operational controls need to be added first. A GitHub source upload does not itself deploy the service.
 
-- **API Mode:** Connect your own provider API keys and choose from the models available to your account.
-- **Agent Mode:** Connect a supported AI chat website and continue using its signed-in conversation. Website access depends on that service and browser permissions.
-- **Prompt Mode:** Create and refine prompts for your chosen model.
-- **Workspaces:** Work with a local PC folder or authorize a GitHub repository. GitHub workspaces edit repository files directly; they do not run commands on your PC.
-- **PC Use:** In a local workspace, Mokel can help read and change project files and run supported commands. Approval settings let you control which actions need your review.
+## Main components
 
-## Pricing
+- `server.mjs`: local HTTP application server and API routes.
+- `dist/`: Mokel R1 web interface and downloadable bridge/companion packages.
+- `lib/`: provider, Agent Mode, workspace, and support modules.
+- `browser-bridge/`: browser extension used to connect supported AI chat tabs.
+- `companion/`: optional Windows companion for local workspace actions.
+- `tests/`: automated regression tests.
+- `docs/GITHUB-WORKSPACE.md`: GitHub workspace behavior and setup notes.
 
-| Edition | Price | What’s included |
-| --- | --- | --- |
-| Web app | **Free (₦0)** | The browser-based Mokel R1 experience. Hosting link coming soon. |
-| Windows desktop | One-time license; price to be announced | Windows app access and lifetime updates within R1. Two active devices per license. |
-| macOS and Linux desktop | Planned; price to be announced | Platform-specific app and lifetime updates within R1. |
-| Android and iOS | Planned; price to be announced | Platform-specific app and lifetime updates within R1. |
+## Modes and workspaces
 
-A license is for one platform. A future major release may require a separate license. Desktop and mobile sales and downloads will open when those editions are ready.
+API Mode uses provider keys configured by the user. Agent Mode connects supported websites in a browser tab; compatibility depends on the site's policies and controls. A local workspace uses the optional companion and approval flow. GitHub workspaces edit repository files through GitHub and do not run commands on the user's PC.
 
-## Costs and accounts
+## Privacy and safety
 
-Mokel R1 does not include paid AI usage. API providers may charge separately under your own provider account and API key. Agent Mode uses your account on the connected AI website and follows that website’s plans, limits, and terms. GitHub workspace access requires authorizing your own GitHub account; using a local workspace does not require a Mokel account.
+Do not publish `data/`, local logs, backups, companion workspace files, pairing tokens, or recovery receipts. Provider keys and local session state are user data. The companion runs using the Windows account's permissions; workspace scoping does not sandbox arbitrary PowerShell commands.
 
-## Availability
+## License
 
-The web edition is planned as a free hosted service. This repository is the public product page; it does not contain the app source code or paid app installers. The hosted web link and platform availability will be added here as they launch.
+Copyright © Ayashi Space. All rights reserved. A license file will be added before public source licensing is offered.

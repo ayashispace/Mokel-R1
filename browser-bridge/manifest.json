@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Mokel R1 Browser Bridge",
+  "version": "0.8.17",
+  "description": "Connect one chosen AI chat tab to your local Mokel R1 app.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "alarms"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1/*",
+    "http://localhost/*"
+  ],
+  "optional_host_permissions": [
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "reconnect.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://127.0.0.1/*",
+        "http://localhost/*"
+      ],
+      "js": [
+        "wake.js"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+  "action": {
+    "default_title": "Connect this tab to Mokel R1",
+    "default_popup": "popup.html"
+  }
+}

@@ -1,0 +1,29 @@
+# Mokel R1 Companion
+
+Double-click **Start Mokel R1 Companion.bat**. The launcher runs Node directly and works even when PowerShell scripts are disabled; do not change your execution policy. Node.js 22.13+ is required (the launcher can use Codex's bundled Node). Copy the displayed token into the panel opened by **Use my PC** in Mokel R1. Keep this window open while using it. Ctrl+C stops it and invalidates its token.
+
+The companion creates a default workspace folder beside its script. In Mokel R1, choose **Settings → Globals → Default PC & workspace** to save a default for new chats, or **Change workspace** beside the message box for a chat-specific folder. Paste an absolute path to an existing folder, or click **Select folder** to open the Windows folder picker. Selection only fills the field; click Save to apply it. Cancelling leaves your workspace unchanged.
+
+File operations are restricted to the selected folder, including checks against path traversal and symbolic links. Each chat has its own workspace. Every action, including reading files, must be approved in Mokel R1. PowerShell commands are available after the user approves their exact text. They run as the current Windows user, starting in the selected folder. This is not a sandbox: commands can modify files outside it even though model instructions forbid those changes. Review the full command and its effects before approving. The companion never requests administrator privileges. Chat transcripts and approval consent are not written to disk. Version 7 keeps encrypted execution receipts and recovery copies as described below.
+
+For an update, close the old companion, extract the new download, start its batch launcher, and reconnect with its newly generated token. Old companions cannot select folders and are rejected by the updated app until upgraded. Existing workspaces are not moved or deleted.
+
+Download packages contain only source and launchers, never workspace files or tokens.
+
+The updated folder picker has a visible, topmost owner window named **Mokel R1 — choose workspace**. Repeated requests share one picker. Use **Cancel / reset folder picker** if you need to dismiss it; it also times out after two minutes without changing the workspace.
+
+Existing-file edits and deletions require a complete approved read. In Agent Mode, share the read through **Send results & continue** first. Each edit checks the file's hash against that read, refusing external changes. Writes use exclusive creation for new files and a temporary file for existing-file replacement. Files over the read limit (100,000 characters) cannot be edited from truncated context. Symbolic links, hard-linked files, and paths outside the selected workspace are refused. Keep normal project backups or version control; these checks are not an operating-system sandbox.
+
+
+PowerShell runs non-interactively without elevation, with a 120-second execution limit and 128 KB output cap. Python scripts can be created with the bounded file tool and run after a separate command approval; Python must already be installed. Errors and timeouts never count as success and commands are never automatically retried. A timeout stops the foreground process tree; detached jobs and scheduled OS actions can outlive their parent command. Command output is never automatically sent to a provider. In Agent Mode choose Send results & continue; in API Mode choose Add results to message, review, then Send.
+
+Precise edits: edit_file replaces one unique exact old_text match with new_text after validating the approved read revision. Missing or repeated matches, changed files, invalid UTF-8, unsafe paths and unapproved actions are refused. Update and restart this companion to enable the tool.
+
+Initialize (companion version 6): clicking Initialize in Mokel R1 prepares a uniquely named Markdown attachment in memory and automatically shares it with the selected AI, without another approval. It never saves the initialization file in the workspace or a temporary folder. Source files and older saved initialization files stay unchanged. Credentials, dependency directories, prior snapshots and binary contents are excluded and listed. Snapshots exceeding the 1 MB text or 5,000-entry limit fail explicitly. Other PC actions still require approval. Update and restart the companion to enable this feature; Mokel refuses initialization with older versions that save snapshots.
+
+
+Version 7 execution recovery: the companion stores encrypted receipts and pre-change copies of existing files in `.mokel-recovery` beside its script, outside the default workspace. Keep this hidden folder (including its key) when updating the same installation. Never include it in a shared project or upload it. Packages exclude it. Initialization snapshots, file-read contents and command output remain memory-only. Recovery copies do contain earlier file contents, encrypted locally.
+
+A repeated execution ID returns its recorded result; it never repeats a completed command. New requests get new IDs and fresh reads. After an interrupted execution, inspect the workspace and propose new work; Mokel will not guess whether an action completed. A failed batch can leave earlier successful changes in place: this is fail-stop execution, not a database-style all-or-nothing transaction. Existing revision checks remain mandatory. PowerShell changes cannot be automatically rolled back.
+
+Mokel saves a bounded encrypted metadata ledger in its data folder for project continuity. It identifies historical execution results and unverified interrupted work; it does not restore approvals or prove that an application builds or works. Recovery preparation uses `/api/pc/recovery` and creates an ordinary pending file-write action, never an automatic overwrite. Restoring an existing file still requires a complete current read and matching revision. No recovery UI was added without the user's consent.
