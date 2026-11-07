@@ -2,7 +2,7 @@
 
 Agent Mode lets you type in Mokel R1 and receive answers from a chat website you are signed into. The **Mokel R1 Browser Bridge** extension passes messages to your chosen tab and brings its replies back. No provider API key is needed for this website connection.
 
-Run Mokel R1 locally on a computer and keep its server running. The AI website and extension must run on that same computer. A pasted link alone cannot connect a browser or another device.
+Agent Mode supports the local app and the official hosted site. For the hosted site, install Browser Bridge 0.8.18 or later in the same browser, approve its Mokel R1 site permission if Chrome asks, reload the extension and refresh Mokel R1. Local PC actions require the local app or desktop app; the hosted website cannot reach the computer companion. A pasted link alone cannot connect a browser or another device.
 
 Open **Settings → Switch mode → Agent Mode**. Follow **Browser → Install → Chat URL → Connect**. Choose the browser holding your AI website; it can differ from the browser displaying Mokel R1. Use Back to correct a choice. Setup choices stay in this tab only.
 
@@ -17,7 +17,7 @@ Open **Settings → Switch mode → Agent Mode**. Follow **Browser → Install �
 7. In Chrome, sign into ChatGPT or DeepSeek. Choose your model, open the conversation you want to use, and leave its message box empty.
 8. Copy that tab’s full address from the address bar, not a Share link. In Mokel R1’s step 3, choose the matching website, paste the address and click **Create code — continue to step 4**.
 9. Click **Copy pairing code**. Return to that exact Chrome chat tab. Open **Mokel R1 Browser Bridge** from the Extensions menu or its pinned icon. Do not open the extension on the Mokel R1 tab.
-10. Paste the code into **Pairing code**. Leave the local Mokel R1 address as `http://127.0.0.1:4173`, unless step 4 shows another address. Click **Connect this tab**.
+10. Paste the code into **Pairing code**. Use the Mokel R1 address shown by the setup screen; the hosted site is `https://mokel-r1.onrender.com`. Click **Connect this tab**.
 11. Keep the small bridge window and AI tab open. Return to Mokel R1 and wait for **Connected**. Click **Start chatting in Mokel R1** and send a short first message.
 
 ## Microsoft Edge on a computer
@@ -120,6 +120,4 @@ The bridge window closes automatically when you finish: disconnect, close its se
 
 PC actions show a visible verified result. Completion status for folder creation and file changes goes back to the AI automatically after all cards are decided. Reads and directory listings still need **Send results & continue** before their contents are shared.
 
-If the tab is closed, Mokel R1 tells you to open it. If there are duplicate copies of the same chat URL, close the extras. If site access was revoked, connect manually again with the checkbox enabled. **Create connection** opens the normal setup whenever you need another target. Without saved connections, setup is unchanged. Firefox temporary add-ons can lose registration on browser exit and may need pairing again.
-
-Saved connections contain only names, URLs and connection settings—not your messages. The website may still save its own chat history.
+If the tab is closed, Mokel R1 tell

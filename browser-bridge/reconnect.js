@@ -4,10 +4,17 @@ const ext=globalThis.browser||chrome;
 if(!globalThis.mokelConversationUrl&&typeof importScripts==='function')importScripts('conversation-url.js');
 let polling=false,waking=false;
 const sameConversation=(first,second)=>globalThis.mokelConversationUrl.same(first,second);
+function validateAppServer(value){
+ const url=value instanceof URL?value:new URL(value);
+ if(url.username||url.password||url.pathname!=='/'||url.search||url.hash)throw Error('Invalid Mokel R1 address.');
+ const local=url.protocol==='http:'&&['127.0.0.1','localhost'].includes(url.hostname);
+ const hosted=url.protocol==='https:'&&url.origin==='https://mokel-r1.onrender.com';
+ if(!local&&!hosted)throw Error('Use Mokel R1 on this computer or the official hosted Mokel R1 website.');
+ return url.origin;
+}
 async function reconnectCall(config,route,data={}){
- const server=new URL(config.server);
- if(server.protocol!=='http:'||!['127.0.0.1','localhost'].includes(server.hostname))throw Error('Invalid local Mokel R1 address.');
- const response=await fetch(server.origin+'/api/agent/bridge/reconnect/'+route,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+config.deviceKey},body:JSON.stringify(data),signal:AbortSignal.timeout(10000)});
+ const server=validateAppServer(config.server);
+ const response=await fetch(server+'/api/agent/bridge/reconnect/'+route,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+config.deviceKey},body:JSON.stringify(data),signal:AbortSignal.timeout(10000)});
  const result=await response.json();if(!response.ok)throw Error(result.error||'Unable to reconnect.');return result;
 }
 async function openSavedTab(config,job){
@@ -60,8 +67,8 @@ async function openSavedTab(config,job){
 }
 function appOrigin(sender){
  const url=new URL(sender.url||'');
- if(sender.id!==ext.runtime.id||sender.frameId!==0||url.protocol!=='http:'||!['127.0.0.1','localhost'].includes(url.hostname)||url.username||url.password)throw Error('Open Mokel R1 in a normal browser tab on this computer.');
- return url.origin;
+ if(sender.id!==ext.runtime.id||sender.frameId!==0)throw Error('Open Mokel R1 in a normal browser tab.');
+ return validateAppServer(url);
 }
 async function prepareDirect(message,sender){
  const server=appOrigin(sender);

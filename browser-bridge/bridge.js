@@ -103,7 +103,7 @@ async function main(){
   const target={tabId:config.tabId,frameIds:[config.frameId||0]};
   await ext.scripting.executeScript({target,files:['conversation-url.js','detect.js','markdown.js','images.js','content.js','native-pc.js']});
   const version=await ext.scripting.executeScript({target,func:()=>({version:globalThis.__mokelBridgeVersion})});
-  if(version[0]?.result?.version!=='0.8.17')throw Error('Refresh the connected website once after updating Browser Bridge 0.8.17, then reconnect. Its existing draft has been preserved.');
+  if(version[0]?.result?.version!=='0.8.18')throw Error('Refresh the connected website once after updating Browser Bridge 0.8.18, then reconnect. Its existing draft has been preserved.');
  }
  // The pairing code authorizes only the exact URL requested by the local user.
  const paired=await call('claim',{code:config.code,url:config.url,deviceKey:config.deviceKey,externalFallback:config.externalFallback===true,...(live?{liveVersion:1}:{}),...(detected?{selectors:detected.selectors}:{})});token=paired.token;connectionTarget=paired.target;delete config.code;

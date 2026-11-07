@@ -5,7 +5,9 @@ document.querySelector('#pair-form').addEventListener('submit',async event=>{
  event.preventDefault();const button=event.submitter;button.disabled=true;
  try{
   const server=new URL(document.querySelector('#server').value);
-  if(server.protocol!=='http:'||!['127.0.0.1','localhost'].includes(server.hostname)||server.username||server.password||server.pathname!=='/'||server.search||server.hash)throw Error('Enter your local Mokel R1 address, such as http://127.0.0.1:4173.');
+  const local=server.protocol==='http:'&&['127.0.0.1','localhost'].includes(server.hostname);
+  const hosted=server.protocol==='https:'&&server.origin==='https://mokel-r1.onrender.com';
+  if((!local&&!hosted)||server.username||server.password||server.pathname!=='/'||server.search||server.hash)throw Error('Enter http://127.0.0.1:4173 or https://mokel-r1.onrender.com.');
   const tab=selectedTab;
   if(!tab?.id||!/^https?:/.test(tab.url||''))throw Error('Open a chat website tab before connecting.');
   const code=document.querySelector('#code').value.trim();
