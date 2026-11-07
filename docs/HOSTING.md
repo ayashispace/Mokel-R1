@@ -18,4 +18,3 @@ The root `render.yaml` defines one free Node web service. It binds to Render's a
 4. After the first deploy, open the service URL and confirm `/healthz` returns `{"ok":true}`.
 
 Automatic deploys are disabled in the Blueprint so later Git pushes do not publish without review.
-

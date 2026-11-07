@@ -29,4 +29,3 @@ Do not publish `data/`, local logs, backups, companion workspace files, pairing 
 ## License
 
 Copyright © Ayashi Space. All rights reserved. A license file will be added before public source licensing is offered.
-
