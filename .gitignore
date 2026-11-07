@@ -1,6 +1,10 @@
 data/
+.venv/
+lib/vendor/node_modules/
 companion/workspace/
 companion/.token
 *.log
 tests/.preview-*/
+tests/.runtime-debug/
+
 

@@ -6,7 +6,7 @@ Mokel R1 brings AI provider APIs and supported AI chat websites into a project w
 
 Requirements: Node.js 22.13 or newer. For document attachment extraction, install the packages in `requirements.txt` into Python and set `MOKEL_PYTHON` to that interpreter. Start the app with `npm start` or `Start Mokel R1.bat`; then open `http://127.0.0.1:4173`.
 
-The app is a local single-user service. It stores encrypted provider settings under `data/` and binds to loopback by default. Do not expose it directly as a multi-user public service: user isolation, persistent shared storage, deployment secrets, and operational controls need to be added first. A GitHub source upload does not itself deploy the service.
+The app can run locally or as a limited hosted preview. Locally, encrypted provider settings are stored under `data/` and the server binds to loopback by default. Hosted sessions are isolated by a random, HttpOnly browser cookie and held in memory only. A restart, free-tier sleep, or redeploy clears API keys, GitHub authorization, chat state, and website pairings. Export a password-protected workspace ZIP before leaving a hosted session if you need to preserve it. The hosted build cannot access a visitor's local PC companion; use the desktop app for local workspaces. See `docs/HOSTING.md` before deploying.
 
 ## Main components
 
@@ -29,3 +29,4 @@ Do not publish `data/`, local logs, backups, companion workspace files, pairing 
 ## License
 
 Copyright © Ayashi Space. All rights reserved. A license file will be added before public source licensing is offered.
+

@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: mokel-r1
+    runtime: node
+    plan: free
+    buildCommand: npm ci --prefix lib/vendor --omit=dev && python3 -m venv .venv && .venv/bin/pip install --no-cache-dir -r requirements.txt
+    startCommand: MOKEL_PYTHON=.venv/bin/python npm start
+    healthCheckPath: /healthz
+    autoDeploy: false
+    envVars:
+      - key: NODE_VERSION
+        value: 22.13.0
+
