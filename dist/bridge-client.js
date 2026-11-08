@@ -1,5 +1,5 @@
-// Only one-time pairing requests and public bridge status cross this boundary.
-// The extension validates the pairing target with the selected Mokel R1 server.
+// Pairing, bridge status and hosted PC relay requests cross this boundary.
+// The extension validates the app origin and restricts PC requests to loopback.
 export function bridgeRequest(action,code,timeout=5000){
  return new Promise((resolve,reject)=>{
   const id=crypto.randomUUID();

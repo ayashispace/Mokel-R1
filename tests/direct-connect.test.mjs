@@ -18,7 +18,7 @@ async function fixture({permission=true,expired=false,duplicate=false,redirect=f
    storage:{session:{get:async key=>({[key]:session[key]}),set:async data=>Object.assign(session,data)},local:{get:async()=>local,set:async data=>Object.assign(local,data)}},
    runtime:{id:'bridge',getURL:path=>origin+path,getManifest:()=>({version:'0.5.0'}),onMessage:{addListener:fn=>listener=fn},onStartup:{addListener(){}},onInstalled:{addListener(){}}},
    alarms:{create:async()=>{},onAlarm:{addListener(){}}}
-  },fetch:async(url,options)=>{requests.push({url,body:JSON.parse(options.body)});return {ok:!expired,json:async()=>expired?{error:'The pairing code is invalid or expired.'}:{target}};}
+  },fetch:async(url,options)=>{requests.push({url,body:options.body?JSON.parse(options.body):null,headers:options.headers});return {ok:!expired,json:async()=>expired?{error:'The pairing code is invalid or expired.'}:{target}};}
  });
  vm.runInContext(conversationSource,context);vm.runInContext(source,context);await tick();
  const app={id:'bridge',url:'http://localhost:4173/',frameId:0,tab:{id:7}};
@@ -76,4 +76,15 @@ test('remembering a browser is opt-in and its credential is not returned to the 
  const response=await f.send({type:'MOKEL_CONNECT_APPROVED',save:true},{id:'bridge',url:f.opened[0]});
  assert.equal(response.ok,true);const key=f.local.mokelBrowsers['http://localhost:4173'].deviceKey;
  assert.match(key,/^[a-f0-9]{64}$/);assert.equal(JSON.stringify(response).includes(key),false);
+});
+
+
+test('PC relay accepts only the Mokel page and fixed companion routes',async()=>{
+ const f=await fixture();const job={route:'/status',token:'secret-token',data:null};
+ assert.equal((await f.send({type:'MOKEL_PING'})).companionRelay,true);
+ assert.equal((await f.send({type:'MOKEL_COMPANION',code:job},{...f.app,url:'https://untrusted.example/'})).ok,false);
+ assert.equal((await f.send({type:'MOKEL_COMPANION',code:{...job,route:'/admin'}})).ok,false);
+ const result=await f.send({type:'MOKEL_COMPANION',code:job});assert.equal(result.ok,true);
+ assert.equal(f.requests.at(-1).url,'http://127.0.0.1:7821/status');assert.equal(f.requests.at(-1).headers.Authorization,'Bearer secret-token');
+ assert.equal(f.opened.length,0);
 });

@@ -97,8 +97,11 @@ ext.alarms.onAlarm.addListener(alarm=>{if(alarm.name==='mokel-reconnect'){void p
 ext.runtime.onStartup.addListener(()=>{void start();});
 ext.runtime.onInstalled.addListener(()=>{void start();});
 ext.runtime.onMessage.addListener((message,sender,reply)=>{
+ if(message?.type==='MOKEL_COMPANION'){
+  (async()=>{appOrigin(sender);const job=message.code,allowed=['/status','/execute','/execution/history','/execution/recovery','/execution/preflight','/workspace/validate','/workspace/pick','/workspace/pick/cancel'];if(!job||!allowed.includes(job.route)||typeof job.token!=='string'||job.token.length>256)throw Error('Invalid companion request.');const response=await fetch('http://127.0.0.1:7821'+job.route,{method:job.data?'POST':'GET',headers:{Authorization:'Bearer '+job.token,'Content-Type':'application/json'},body:job.data?JSON.stringify(job.data):undefined,redirect:'error',signal:AbortSignal.timeout(job.route==='/workspace/pick'?305000:130000)});const result=await response.json();if(!response.ok)throw Error(response.status===403?'Update and restart the Companion from Get The Companion, then reconnect your PC.':result.error||'The companion rejected this request.');return {ok:true,result};})().then(reply,error=>reply({ok:false,error:error.message}));return true;
+ }
  if(message?.type==='MOKEL_PING'){
-  try{appOrigin(sender);reply({ok:true,version:ext.runtime.getManifest().version});}catch(error){reply({ok:false,error:error.message});}return;
+  try{appOrigin(sender);reply({ok:true,companionRelay:true,version:ext.runtime.getManifest().version});}catch(error){reply({ok:false,error:error.message});}return;
  }
  if(message?.type==='MOKEL_CONNECT'){
   prepareDirect(message,sender).then(reply,error=>reply({ok:false,error:error.message}));return true;

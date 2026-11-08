@@ -2,7 +2,7 @@
 
 Agent Mode lets you type in Mokel R1 and receive answers from a chat website you are signed into. The **Mokel R1 Browser Bridge** extension passes messages to your chosen tab and brings its replies back. No provider API key is needed for this website connection.
 
-Agent Mode supports the local app and the official hosted site. For the hosted site, install Browser Bridge 0.1.0 or later in the same browser, approve its Mokel R1 site permission if Chrome asks, reload the extension and refresh Mokel R1. Local PC actions require the local app or desktop app; the hosted website cannot reach the computer companion. A pasted link alone cannot connect a browser or another device.
+Agent Mode supports the local app and the official hosted site. For the hosted site, install Browser Bridge 0.1.0 or later in the same browser, approve its Mokel R1 site permission if Chrome asks, reload the extension and refresh Mokel R1. Local PC actions on the hosted website require the updated Bridge and companion on the same computer, with Mokel kept open to relay requests. A pasted link alone cannot connect a browser or another device.
 
 Open **Settings → Switch mode → Agent Mode**. Follow **Browser → Install → Chat URL → Connect**. Choose the browser holding your AI website; it can differ from the browser displaying Mokel R1. Use Back to correct a choice. Setup choices stay in this tab only.
 

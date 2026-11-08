@@ -6,7 +6,7 @@ Mokel R1 brings AI provider APIs and supported AI chat websites into a project w
 
 Requirements: Node.js 22.13 or newer. For document attachment extraction, install the packages in `requirements.txt` into Python and set `MOKEL_PYTHON` to that interpreter. Start the app with `npm start` or `Start Mokel R1.bat`; then open `http://127.0.0.1:4173`.
 
-The app can run locally or as a limited hosted preview. Locally, encrypted provider settings are stored under `data/` and the server binds to loopback by default. Hosted sessions are isolated by a random, HttpOnly browser cookie and held in memory only. A restart, free-tier sleep, or redeploy clears API keys, GitHub authorization, chat state, and website pairings. Export a password-protected workspace ZIP before leaving a hosted session if you need to preserve it. The hosted build cannot access a visitor's local PC companion; use the desktop app for local workspaces. See `docs/HOSTING.md` before deploying.
+The app can run locally or as a limited hosted preview. Locally, encrypted provider settings are stored under `data/` and the server binds to loopback by default. Hosted sessions are isolated by a random, HttpOnly browser cookie and held in memory only. A restart, free-tier sleep, or redeploy clears API keys, GitHub authorization, chat state, and website pairings. Export a password-protected workspace ZIP before leaving a hosted session if you need to preserve it. The hosted build relays local PC requests through the Browser Bridge in an open Mokel tab. Install the latest Bridge and companion; normal workspace and approval rules apply. See `docs/HOSTING.md` before deploying.
 
 ## Main components
 

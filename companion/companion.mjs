@@ -117,7 +117,7 @@ function preflight(items,root){
 }
 function reply(res,status,data){res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(data))}
 const server=http.createServer(async(req,res)=>{
- if(req.headers.origin||!['127.0.0.1:7821','localhost:7821'].includes(req.headers.host)){reply(res,403,{error:'Only the local Mokel R1 server may connect.'});return}
+ if((req.headers.origin&&!/^(chrome-extension|moz-extension):\/\/[a-zA-Z0-9-]+$/.test(req.headers.origin))||!['127.0.0.1:7821','localhost:7821'].includes(req.headers.host)){reply(res,403,{error:'Only the local Mokel R1 server may connect.'});return}
  const supplied=String(req.headers.authorization||'');
  const expected='Bearer '+token;
  if(supplied.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(supplied),Buffer.from(expected))){reply(res,401,{error:'The companion token is incorrect.'});return}
