@@ -330,7 +330,7 @@ function providersDialog(id=state.provider,view=providerView){
  modal.scrollTop=0;(adding?$('#custom-name'):modal.querySelector('[data-action="provider-tab"][aria-pressed="true"]'))?.focus();
 }
 
-function applyZoom(value){document.documentElement.style.zoom=String(value/100);document.documentElement.style.setProperty('--page-zoom',value/100)}
+function applyZoom(value){const scale=value/100*.9;document.documentElement.style.zoom=String(scale);document.documentElement.style.setProperty('--page-zoom',scale)}
 function settingsDialog(){applyZoom(state.preferences.zoom);openModal('settings','<h2>Make it yours.</h2><p>Settings for your whole workspace.</p><div class="settings-options"><button data-action="globals">'+icon('globe')+'<span><strong>Globals</strong><small>Default prompt, PC connection and workspace</small></span>'+icon('chevron-right')+'</button><button data-action="zoom">'+icon('zoom-in')+'<span><strong>Page zoom</strong><small>Adjust the size of the whole page · '+state.preferences.zoom+'%</small></span>'+icon('chevron-right')+'</button><button data-action="modes">'+icon('workflow')+'<span><strong>Switch mode</strong><small>Agent, API or Generator · '+modeName()+'</small></span>'+icon('chevron-right')+'</button></div>')}
 function appStoreDialog(){openModal('get-app','<button class="provider-back" data-action="settings">'+icon('arrow-left')+' Settings</button><h2>Get Mokel R1.</h2><p>Choose the app you want. Each option opens its payment page.</p><div class="settings-options app-download-options"><button data-action="get-mobile-app">'+icon('smartphone')+'<span><strong>Get Mobile App</strong><small>For Android and iPhone</small></span>'+icon('arrow-right')+'</button><button data-action="get-desktop-app">'+icon('monitor-down')+'<span><strong>Get Desktop App</strong><small>For Windows, macOS and Linux</small></span>'+icon('arrow-right')+'</button></div>')}
 function globalsDialog(){openModal('globals','<button class="provider-back" data-action="settings">'+icon('arrow-left')+' Settings</button><h2>Globals.</h2><p>Defaults for your chats. Your global prompt is applied alongside each chat’s own instructions.</p><div class="settings-options"><button data-action="global-model">'+icon('cpu')+'<span><strong>Default model</strong><small>'+esc(state.preferences.defaultModel?state.preferences.defaultModel.provider+' · '+state.preferences.defaultModel.id:'Choose a default for new API chats')+'</small></span>'+icon('chevron-right')+'</button><button data-action="global-prompt">'+icon('file-text')+'<span><strong>Global system prompt</strong><small>'+(state.preferences.systemPrompt?'Instructions saved':'No default instructions')+'</small></span>'+icon('chevron-right')+'</button><button data-action="global-pc">'+icon('folder')+'<span><strong>Default PC &amp; workspace</strong><small>'+esc(state.globalPC.connected?state.globalPC.workspace||'Companion connected':'New chats start disconnected')+'</small></span>'+icon('chevron-right')+'</button></div><p class="small-note">Connecting a PC inside a chat affects only that chat. Globals provides defaults for new chats; existing chats keep their PC connection, workspace and model. Global settings are saved on this computer; chat-specific settings are saved only in exported chat files.</p>');}
@@ -653,7 +653,7 @@ async function drainAPIQueue(c){
   }
  }finally{
   c.pending=false;c.sendingAPI=false;
-  if(state.active===c.id)render();else renderNav();
+  if(state.active===c.id)render(true);else renderNav();
  }
 }
 

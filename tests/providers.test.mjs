@@ -43,15 +43,16 @@ for (const provider of PROVIDERS.filter(provider=>!provider.local)) {
 
 test('catalog pagination deduplicates models and rejects non-chat categories', async () => {
   const urls = [];
-  const models = await listModels('gemini', 'test', async url => {
+  const models = await listModels('gemini', 'test', async (url, options) => {
+    if(options.method==='POST')return Response.json({candidates:[{finishReason:'MAX_TOKENS'}]});
     urls.push(url);
     return Response.json(urls.length === 1
       ? {models: [{name: 'models/gemini-chat', supportedGenerationMethods: ['generateContent']}], nextPageToken: 'page 2'}
       : {models: [{name: 'models/gemini-chat'}, {name: 'models/embedding-001'}]});
   });
-  assert.equal(models.length, 2);
+  assert.equal(models.length, 1);
   assert.match(urls[1], /pageToken=page%202/);
-  assert.equal(models.find(m => m.id === 'embedding-001').supported, false);
+  assert.equal(models.some(m => m.id === 'embedding-001'), false);
   for (const id of ['whisper-large', 'dall-e-3', 'sora', 'realtime', 'llama-guard']) {
     assert.equal(classify(id, 'openai').supported, false, id);
   }
@@ -146,13 +147,22 @@ test('OpenRouter uses modality metadata rather than model-name guesses', () => {
   assert.equal(classify('unknown', 'openrouter', {}).supported, false);
 });
 
-test('Google catalog reports quota uncertainty rather than claiming free entitlement', async () => {
-  const result = await loadCatalog('gemini', 'fixture', async () => Response.json({models: [
-    {name: 'models/gemini-test', supportedGenerationMethods: ['generateContent']}
-  ]}));
-  assert.equal(result.models.length, 1);
-  assert.match(result.accessNote, /not a guarantee of free access/);
-  assert.equal(result.models[0].status, 'untested');
+test('Gemini lists only models whose generation access is confirmed for this key', async () => {
+ const calls=[];
+ const result=await loadCatalog('gemini','private-fixture',async(url,options)=>{
+  if(options.method==='GET')return Response.json({models:['allowed','denied','quota','missing','broken','blocked'].map(id=>({name:'models/gemini-'+id,supportedGenerationMethods:['generateContent']}))});
+  calls.push({url,options});
+  if(url.includes('allowed'))return Response.json({candidates:[{finishReason:'MAX_TOKENS'}]});
+  if(url.includes('broken'))throw Error('offline');
+  if(url.includes('blocked'))return Response.json({promptFeedback:{blockReason:'OTHER'}});
+  return Response.json({error:{message:'private-fixture'}},{status:url.includes('quota')?429:url.includes('missing')?404:403});
+ });
+ assert.deepEqual(result.models.map(m=>m.id),['gemini-allowed']);
+ assert.equal(result.models[0].status,'available');
+ assert.equal(calls.length,6);
+ assert.ok(calls.every(c=>c.options.headers['x-goog-api-key']==='private-fixture'&&JSON.parse(c.options.body).generationConfig.maxOutputTokens===1));
+ assert.match(result.accessNote,/Checks use API quota/);
+ assert.doesNotMatch(JSON.stringify(result),/private-fixture/);
 });
 
 test('insufficient credit errors are clear and do not echo provider payloads', async () => {
