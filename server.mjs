@@ -139,7 +139,7 @@ async function executePCActionSerial(action){
 async function api(req,res,url){
  const bootstrap=url.pathname==='/api/bootstrap'&&req.method==='GET';
  let tenant=tenantFromCookie(req);
- if(!hosted&&!tenant&&bootstrap){tenant=localTenant||createTenant(initialSettings);localTenant=tenant;tenants.set(tenant.id,tenant);}
+ if(!hosted&&!tenant&&bootstrap){tenant=localTenant||createTenant(initialSettings);localTenant=tenant;tenants.set(tenant.id,tenant);res.setHeader('Set-Cookie','mokel_session='+tenant.id+'; HttpOnly; SameSite=Strict; Path=/'+(process.env.NODE_ENV==='production'?'; Secure':''));}
  if(!tenant&&bootstrap){
   const now=Date.now();for(const [id,entry] of tenants)if(now-entry.lastSeen>24*60*60*1000){requestContext.run(entry,()=>{for(const value of entry.agentBridge.entries.values())value.bridge.disconnect();});tenants.delete(id);for(const [token,owner] of bridgeTokenOwners)if(owner===id)bridgeTokenOwners.delete(token);}
   if(hosted&&tenants.size>=1000){json(res,{error:'Mokel is temporarily at capacity. Try again shortly.'},503);return;}

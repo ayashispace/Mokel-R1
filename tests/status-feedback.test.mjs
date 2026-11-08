@@ -33,6 +33,6 @@ test('website setup progress is neutral and failed setup is red, including retri
 });
 
 test('manual selectors use same-browser confirmation when the bridge is ready',async()=>{
- const f=fixture();f.elements['#agent-custom-mode'].value='manual';f.elements['#agent-auto-browser'].value='@this';f.context.localBridge={version:'0.6.3'};f.context.URL=URL;const requests=[];f.context.bridgeRequest=async(type,code)=>{requests.push({type,code});return {version:'0.6.3'};};f.context.setAgent=(c,result)=>{c.agent=result;};
+ const f=fixture();f.elements['#agent-custom-mode'].value='manual';f.elements['#agent-auto-browser'].value='@this';f.context.localBridge={version:'0.8.18'};f.context.URL=URL;const requests=[];f.context.bridgeRequest=async(type,code)=>{requests.push({type,code});return {version:'0.8.18'};};f.context.setAgent=(c,result)=>{c.agent=result;};
  const pending=f.submit();await turn();f.resolve({pairing:{code:'test-pairing'}});await pending;assert.equal(requests.length,2);assert.equal(requests[1].type,'connect');assert.equal(requests[1].code,'test-pairing');assert.equal(f.classes.has('form-error'),false);
 });

@@ -239,16 +239,16 @@ test('local server protects connections, processes attachments, and never saves 
   let autoJob;for(let i=0;i<20;i++){autoJob=(await (await bridgePost('reconnect/pull',{},deviceKey)).json()).job;if(autoJob)break;await new Promise(resolve=>setTimeout(resolve,5));}
   assert.ok(autoJob);assert.equal(autoJob.target.autoDetect,true);
   const prepared=await (await bridgePost('prepare',{code:autoJob.code})).json();assert.equal(prepared.target.url,'https://custom-fixture.test/');
-  assert.equal((await bridgePost('setup-status',{code:'invalid',error:'bad'})).status,400);
+  assert.equal((await bridgePost('setup-status',{code:'invalid',error:'bad'})).status,401);
   assert.equal((await bridgePost('setup-status',{code:autoJob.code,error:'Sign in in the website tab.'})).status,200);
   const progress=await (await fetch(base+'/api/agent?thread=auto-test',{headers})).json();assert.equal(progress.pairing.error,'Sign in in the website tab.');
   assert.equal((await bridgePost('setup-status',{code:autoJob.code,progress:'Checking controls…'})).status,200);
   assert.equal((await (await fetch(base+'/api/agent?thread=auto-test',{headers})).json()).pairing.error,'');
-  assert.equal((await bridgePost('prepare',{code:'invalid'})).status,400);
+  assert.equal((await bridgePost('prepare',{code:'invalid'})).status,401);
   assert.equal((await bridgePost('claim',{code:autoJob.code,url:'https://custom-fixture.test/chat/a',deviceKey})).status,400);
   const autoClaim=await (await bridgePost('claim',{code:autoJob.code,url:'https://custom-fixture.test/chat/a',deviceKey,selectors:{composer:'textarea',send:'.send',reply:'.assistant',busy:'.stop'}})).json();
   assert.ok(autoClaim.token);
-  assert.equal((await bridgePost('setup-status',{code:autoJob.code,error:'Late failure'})).status,400,'An old setup cannot change a completed connection');
+  assert.equal((await bridgePost('setup-status',{code:autoJob.code,error:'Late failure'})).status,401,'An old setup cannot change a completed connection');
   assert.equal((await bridgePost('reconnect/result',{id:autoJob.id},deviceKey)).status,200);
   const autoResult=await (await automatic).json();assert.equal(autoResult.connected,true);assert.equal(autoResult.connection.url,'https://custom-fixture.test/chat/a');
   assert.equal((await (await fetch(base+'/api/agent/saved',{headers})).json()).connections.length,1,'Automatic setup must not save a connection without an explicit Save');

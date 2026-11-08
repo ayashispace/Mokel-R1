@@ -1,6 +1,6 @@
 (()=>{
  if(globalThis.__mokelBridgeInstalled)return;
- globalThis.__mokelBridgeInstalled=true;globalThis.__mokelBridgeVersion='0.8.17';
+ globalThis.__mokelBridgeInstalled=true;globalThis.__mokelBridgeVersion='0.8.18';
  const ext=globalThis.browser||chrome;
  let busy=false,replyWake=null,promptContext=null;
  // Delivery state is memory-only. A retry may finish an upload already staged by
