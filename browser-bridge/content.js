@@ -19,6 +19,9 @@
  // can also advance this wait through an authenticated extension message.
  function replyTick(ms){return new Promise(resolve=>{let timer;const wake=()=>{clearTimeout(timer);if(replyWake===wake)replyWake=null;resolve();};replyWake=wake;timer=setTimeout(wake,ms);});}
  const presets={
+  perplexity:{composer:'.composer-editable[contenteditable="true"][data-lexical-editor="true"]',send:'button[aria-label="Submit"]',reply:'[data-workflow-items] [data-renderer="lm"]',busy:'button[aria-label="Stop generating"]'},
+  copilot:{composer:'#m365-chat-editor-target-element[contenteditable="true"]',send:'button[aria-label="Send"]',reply:'[data-testid="markdown-reply"]',busy:'button[aria-label="Stop generating"]'},
+  gemini:{composer:'rich-textarea .ql-editor[contenteditable="true"][role="textbox"]',send:'button[aria-label="Send message"]',reply:'message-content[id^="message-content-id-r_"] .markdown',busy:'button[aria-label="Stop response"]'},
   chatgpt:{composer:'#prompt-textarea, [contenteditable="true"][role="textbox"][aria-label="Ask ChatGPT"]',send:'button[data-testid="send-button"], button[aria-label="Send prompt"], button[type="submit"][aria-label="Send"]',reply:'[data-message-author-role="assistant"], [data-markdown-text-style="assistant-message"], article[data-turn="assistant"], [data-testid="generated-image-gallery"]',busy:'button[data-testid="stop-button"], button[aria-label="Stop streaming"], button[aria-label="Stop generating"], button[aria-label="Stop"]'},
   // Current DeepSeek uses an unlabelled div button. Match its observed send
   // arrow, never an arbitrary nearby button (which could attach a file or stop).
@@ -94,11 +97,12 @@
   return {named,uploading};
  }
  const temporary=message=>Object.assign(Error(message),{safeRetry:true});
+ const cleanEditorText=text=>['copilot.com','copilot.microsoft.com'].includes(location.hostname)?String(text).replace(/[\u200b\u200c]+(?=\s*$)/g,''):text;
  function editorText(el){
-  if(typeof el?.value==='string')return el.value;
-  if(!el?.childNodes)return el?.innerText??el?.textContent??'';
+  if(typeof el?.value==='string')return cleanEditorText(el.value);
+  if(!el?.childNodes)return cleanEditorText(el?.innerText??el?.textContent??'');
   const read=node=>{if(node.nodeType===3)return node.textContent||'';if(node.nodeType!==1)return '';if(node.tagName==='BR')return '\n';const text=[...node.childNodes].map(read).join('');return /^(P|DIV|LI|PRE)$/.test(node.tagName)?text+'\n':text;};
-  return [...el.childNodes].map(read).join('');
+  return cleanEditorText([...el.childNodes].map(read).join(''));
  }
  const sameDraft=(el,text)=>editorText(el).replace(/\s+/g,' ').trim()===String(text||'').replace(/\s+/g,' ').trim();
  const setupDraftMatches=(el,job)=>{if(job?.kind!=='setup'||!job.legacyText)return false;const normalize=text=>String(text).replace(/Replace SESSION_VALUE with:\s*[0-9a-f-]{36}/gi,'Replace SESSION_VALUE with: CURRENT_SESSION').replace(/\s+/g,' ').trim();return normalize(editorText(el))===normalize(job.legacyText);};
@@ -286,7 +290,7 @@
   if(message.type==='MOKEL_REPLY_TICK'){replyWake?.();respond({ok:true});return;}
   if(message.type==='MOKEL_DETECT'){
    try{assertSignedIn();if(!globalThis.__mokelDetect)throw Error('Update Mokel R1 Browser Bridge to use automatic setup.');
-    const site=location.hostname==='chatgpt.com'?'chatgpt':location.hostname==='chat.deepseek.com'?'deepseek':location.hostname==='grok.com'?'grok':null;
+    const site=location.hostname==='chatgpt.com'?'chatgpt':location.hostname==='chat.deepseek.com'?'deepseek':location.hostname==='grok.com'?'grok':location.hostname==='gemini.google.com'?'gemini':['www.perplexity.ai','perplexity.ai'].includes(location.hostname)?'perplexity':['copilot.com','copilot.microsoft.com'].includes(location.hostname)?'copilot':null;
     const hint=location.hostname==='claude.ai'&&/^\/(?:new|chat\/[^/]+)\/?$/.test(location.pathname)?{composer:'[data-testid="chat-input"][contenteditable="true"]',send:'button[data-testid="chat-input-send"][aria-label="Send message"]',reply:'[data-transcript-engine-root] [data-cds="Prose"]',busy:'button[aria-label="Stop response"], button[aria-label="Stop generating"]'}:
      ['meta.ai','www.meta.ai'].includes(location.hostname)&&/^\/(?:prompt\/[^/]+)?\/?$/.test(location.pathname)?{composer:'[data-testid="composer-input"][contenteditable="true"]',send:'button[data-testid="composer-send-button"][aria-label="Send"]',reply:'[data-testid="assistant-message"]',busy:'button[aria-label="Stop"], button[aria-label="Stop generating"]'}:
      location.hostname==='chat.mistral.ai'?{composer:'div.ProseMirror[contenteditable="true"]',send:'button[aria-label="Send"]',reply:'[data-message-author-role="assistant"] [data-testid="text-message-part"]',busy:'button[aria-label="Stop"], button[aria-label="Stop generating"], button[aria-label="Stop streaming"]'}:null;

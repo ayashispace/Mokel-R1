@@ -158,6 +158,7 @@ async function main(){
     }
     const scan=await ext.tabs.sendMessage(config.tabId,{type:'MOKEL_PC_SCAN',session:result.pc?.session||null,connection:id},{frameId:config.frameId||0});
     if(lastActivity!==!!scan?.running||scan?.firstUserMessage&&lastTitle!==scan.firstUserMessage){await call('native-activity',{running:!!scan?.running,...(scan?.firstUserMessage?{firstUserMessage:scan.firstUserMessage}:{})});lastActivity=!!scan?.running;lastTitle=scan?.firstUserMessage||lastTitle;}
+    for(const invalid of scan?.invalid||[]){const accepted=await call('native-invalid',invalid);if(accepted.ok){if(accepted.reviewRequired)await focusMokel(accepted.thread,true);await ext.tabs.sendMessage(config.tabId,{type:'MOKEL_PC_INVALID_ACK',session:invalid.mokelSession,text:invalid.text},{frameId:config.frameId||0});}}
     for(const proposal of scan?.proposals||[]){const accepted=await call('native-pc',proposal);if(accepted.ok||accepted.duplicate){await focusMokel(accepted.thread,accepted.reviewRequired!==false);await ext.tabs.sendMessage(config.tabId,{type:'MOKEL_PC_ACK',session:proposal.mokelSession,requestId:proposal.requestId},{frameId:config.frameId||0});}}
    }catch(error){document.querySelector('#error').textContent=error.message;if(/changed|receiving end|frame|Reconnect/i.test(error.message))await disconnect(true,error.message);}
    finally{scanning=false;}

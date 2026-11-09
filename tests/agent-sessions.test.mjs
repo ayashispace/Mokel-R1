@@ -106,3 +106,17 @@ test('one app page leaving cannot release another page’s chat connection',t=>{
  assert.throws(()=>sessions.presence({clientId:'page-b',threads:['second',null],active:true}),/Open a Mokel R1 chat/);
  assert.equal(sessions.status('second').connected,true);
 });
+
+test('Gemini adopts its first conversation URL once, without accepting another conversation or sign-in redirect',t=>{
+ const {sessions}=fixture(t);const {pairing}=sessions.pair({thread:'gemini',site:'custom',url:'https://gemini.google.com/app',presentation:'external'});sessions.claim(pairing.code,'https://gemini.google.com/app',origin);
+ assert.throws(()=>sessions.nativeLocation('gemini','https://accounts.google.com/'),/changed/);
+ assert.throws(()=>sessions.nativeLocation('gemini','https://gemini.google.com/settings'),/changed/);
+ assert.equal(sessions.nativeLocation('gemini','https://gemini.google.com/app/ad7d6eda36168c70').url,'https://gemini.google.com/app/ad7d6eda36168c70');
+ assert.throws(()=>sessions.nativeLocation('gemini','https://gemini.google.com/app/5260ffad337ddc33'),/changed/);
+});
+
+test('Copilot redirects are canonicalized and its first conversation is adopted only once',t=>{
+ const {sessions}=fixture(t);const {pairing}=sessions.pair({thread:'copilot',site:'custom',url:'https://copilot.microsoft.com/',presentation:'external'});assert.equal(pairing.target.url,'https://copilot.com/chat');sessions.claim(pairing.code,'https://copilot.com/chat',origin);
+ assert.equal(sessions.nativeLocation('copilot','https://copilot.com/chat/conversation/28f020d8-116f-4169-8bdf-62f90754df3f').url,'https://copilot.com/chat/conversation/28f020d8-116f-4169-8bdf-62f90754df3f');
+ assert.throws(()=>sessions.nativeLocation('copilot','https://copilot.com/chat/conversation/9b8e3926-6f35-4e89-9e42-68b10f44db9c'),/changed/);
+});

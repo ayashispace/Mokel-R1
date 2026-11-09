@@ -11,7 +11,7 @@ const url='https://chatgpt.com/c/adapter-test';
 // Execute the actual extension listener against a small page fixture. The new
 // layout replaces Voice with Send only after an editable textbox receives input.
 function fixture({layout='current',pageURL='',draft='',noComposer=false,noSend=false,disabledSend=false,nested=false,codeBlock=false,complete=false,streamUntil=0,login=false,overload=false,overloadBefore=false,imageOnly=false,galleryOnly=false,backgroundTimers=false,sendDelay=400,delayedCommit=false,richParagraphs=false,linkFormatting=false,clearOnSend=false,userEdits=false,text='Hello'}={}){
- const custom=layout==='claude'?{composer:'[data-testid="chat-input"][contenteditable="true"]',send:'button[data-testid="chat-input-send"][aria-label="Send message"]',reply:'[data-transcript-engine-root] [data-cds="Prose"]',busy:'button[aria-label="Stop response"]'}:layout==='meta'?{composer:'[data-testid="composer-input"][contenteditable="true"]',send:'button[data-testid="composer-send-button"][aria-label="Send"]',reply:'[data-testid="assistant-message"]',busy:'button[aria-label="Stop"]'}:layout==='mistral'?{composer:'div.ProseMirror[contenteditable="true"]',send:'button[aria-label="Send"]',reply:'[data-message-author-role="assistant"] [data-testid="text-message-part"]',busy:'button[aria-label="Stop"]'}:layout==='oxalpha'?{composer:'textarea[placeholder="Send a message..."]',send:'button[title="Send"]',reply:'.msg-assistant .prose',busy:'button[title="Stop"]'}:null;
+ const custom=layout==='gemini'?{composer:'rich-textarea .ql-editor[contenteditable="true"][role="textbox"]',send:'button[aria-label="Send message"]',reply:'message-content[id^="message-content-id-r_"] .markdown',busy:'button[aria-label="Stop response"]'}:layout==='perplexity'?{composer:'.composer-editable[contenteditable="true"][data-lexical-editor="true"]',send:'button[aria-label="Submit"]',reply:'[data-workflow-items] [data-renderer="lm"]',busy:'button[aria-label="Stop generating"]'}:layout==='copilot'?{composer:'#m365-chat-editor-target-element[contenteditable="true"]',send:'button[aria-label="Send"]',reply:'[data-testid="markdown-reply"]',busy:'button[aria-label="Stop generating"]'}:layout==='claude'?{composer:'[data-testid="chat-input"][contenteditable="true"]',send:'button[data-testid="chat-input-send"][aria-label="Send message"]',reply:'[data-transcript-engine-root] [data-cds="Prose"]',busy:'button[aria-label="Stop response"]'}:layout==='meta'?{composer:'[data-testid="composer-input"][contenteditable="true"]',send:'button[data-testid="composer-send-button"][aria-label="Send"]',reply:'[data-testid="assistant-message"]',busy:'button[aria-label="Stop"]'}:layout==='mistral'?{composer:'div.ProseMirror[contenteditable="true"]',send:'button[aria-label="Send"]',reply:'[data-message-author-role="assistant"] [data-testid="text-message-part"]',busy:'button[aria-label="Stop"]'}:layout==='oxalpha'?{composer:'textarea[placeholder="Send a message..."]',send:'button[title="Send"]',reply:'.msg-assistant .prose',busy:'button[title="Stop"]'}:null;
  const site=custom?'custom':layout==='deepseek'?'deepseek':layout==='grok'?'grok':'chatgpt';
  const currentUrl=pageURL||(layout==='mistral'?'https://chat.mistral.ai/work/fixture':custom?'https://oxalpha.com/chat':layout==='grok'?'https://grok.com/c/adapter-test?rid=fixture':url);
  let pendingText=null;let listener,clock=0,enteredAt=draft?0:null,sent=false,clicks=0,edits=0,userChanged=false,model='Model A';const staged=[],progress=[];
@@ -28,7 +28,7 @@ function fixture({layout='current',pageURL='',draft='',noComposer=false,noSend=f
  }
  class Textarea extends Element{get value(){return this.innerText;}set value(v){this.innerText=v;this.textContent=v;enteredAt=clock;edits++;staged.push(v);}}
  class Input extends Element{}
- const composer=layout==='deepseek'||custom?new Textarea({},draft):new Element({},draft);
+ const composer=layout!=='gemini'&&(layout==='deepseek'||custom)?new Textarea({},draft):new Element({},draft);
  const oldReply=new Element({},'Old answer must not be returned');
  const newReply=new Element({},imageOnly?'':'A fresh answer');
  newReply.closest=()=>complete?{getAttribute:()=> 'complete'}:null;
@@ -300,3 +300,14 @@ test('native result submission does not enumerate old assistant replies',async()
 test('asynchronous rich editors commit once before sending',async()=>{const page=fixture({delayedCommit:true,clearOnSend:true});const result=await page.send({submitOnly:true});assert.equal(result.submitted,true);assert.equal(page.stats().clicks,1);assert.equal(page.stats().edits,1);});
 
 for(const [layout,pageURL] of [['claude','https://claude.ai/new'],['claude','https://claude.ai/chat/test'],['meta','https://meta.ai/'],['meta','https://www.meta.ai/prompt/test']])test(layout+' connects idle without a send button or previous reply: '+pageURL,async()=>{const page=fixture({layout,pageURL,noSend:true});const result=await page.detect();assert.ok(result.selectors?.composer);assert.equal(page.stats().edits,0);assert.equal(page.stats().clicks,0);});
+
+
+test('Gemini recognizes an empty rich editor without Send or prior replies, then submits once',async()=>{
+ const f=fixture({layout:'gemini',pageURL:'https://gemini.google.com/app/ad7d6eda36168c70',clearOnSend:true,delayedCommit:true,sendDelay:800,complete:true});
+ const detected=await f.detect();assert.equal(detected.error,undefined);assert.match(detected.selectors.composer,/rich-textarea/);
+ const reply=await f.send();assert.equal(reply.text,'A fresh answer');assert.equal(f.stats().clicks,1);
+});
+
+for(const [layout,pageURL] of [['perplexity','https://www.perplexity.ai/session/test'],['copilot','https://copilot.com/chat/conversation/test']])test(layout+' connects with an empty editor and sends once after Send appears',async()=>{
+ const page=fixture({layout,pageURL,clearOnSend:true,delayedCommit:true,sendDelay:800,complete:true});const detected=await page.detect();assert.equal(detected.error,undefined);assert.ok(detected.selectors);assert.equal(page.stats().clicks,0);const result=await page.send();assert.equal(result.text,'A fresh answer');assert.equal(page.stats().clicks,1);
+});

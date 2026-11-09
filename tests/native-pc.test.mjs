@@ -69,3 +69,14 @@ test('a busy website never accumulates a fifteen-second result retry delay',()=>
 test('confirmed website edits advance the revision only after the model receives their successful result',()=>{const f=fixture(),config=f.pc.enable('one');const setup=f.pc.delivery('one');f.pc.delivered('one',{id:setup.id});f.pc.propose('one',{mokelSession:config.session,requestId:'write',actions:[{type:'write_file',path:'a',content:'known new content'}]});const write=[...f.pending.values()][0];Object.assign(write,{status:'done',result:'Wrote a',fileRevision:'new-revision'});const job=f.pc.delivery('one');assert.equal(f.pc.readRevisions.has('a'),false);f.pc.delivered('one',{id:job.id});f.pc.propose('one',{mokelSession:config.session,requestId:'edit-next',actions:[{type:'edit_file',path:'a',old_text:'new',new_text:'updated'}]});assert.equal([...f.pending.values()].at(-1).expectedRevision,'new-revision');});
 
 test('auto-approved results select the website without requesting window focus',()=>{for(const manual of [false,true]){const f=fixture(),config=f.pc.enable('one'),setup=f.pc.delivery('one');f.pc.delivered('one',{id:setup.id});f.pc.propose('one',{mokelSession:config.session,requestId:'request',actions:[{type:'make_directory',path:'a'}]});const action=[...f.pending.values()][0];Object.assign(action,{status:'done',result:'Created a',...(manual?{}:{approvedBy:'Auto-approve all actions'})});const job=f.pc.delivery('one'),receipt=f.pc.delivered('one',{id:job.id});assert.equal(receipt.returnToWebsite,true);assert.equal(receipt.focusWindow,manual);assert.equal(f.pc.delivered('one',{id:job.id}).returnToWebsite,false);}});
+
+test('malformed commands are visible errors and generate a bounded correction result without any executable action',()=>{
+ const f=fixture(),config=f.pc.enable('one'),setup=f.pc.delivery('one');f.pc.delivered('one',{id:setup.id});
+ const input={mokelSession:config.session,text:'{"mokelSession":"'+config.session+'","actions":['};
+ assert.equal(f.pc.invalidProposal('one',input).invalid,true);assert.equal(f.pc.invalidProposal('one',input).duplicate,true);
+ const error=[...f.pending.values()][0];assert.equal(error.status,'error');assert.equal(error.type,'invalid_command');assert.equal(error.pcRevision,f.settings.get('one').revision);
+ const result=f.pc.delivery('one');assert.match(result.text,/no action ran/);assert.match(result.text,/fresh requestId/);f.pc.delivered('one',{id:result.id});
+ assert.throws(()=>f.pc.invalidProposal('one',{...input,mokelSession:'old'}),/old PC session/);
+ for(let i=0;i<4;i++){f.pc.invalidProposal('one',{...input,text:input.text+i});const job=f.pc.delivery('one');if(i<2){assert.ok(job);f.pc.delivered('one',{id:job.id});}else assert.equal(job,null);}
+ assert.ok([...f.pending.values()].every(a=>a.status==='error'));
+});
