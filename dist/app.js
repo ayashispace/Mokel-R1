@@ -1,3 +1,4 @@
+import {isMobileBrowser,mobileNoticeMarkup} from './mobile-notice.js';
 import {generatorResult} from './generator-result.js';
 import {visibleGeneratorMessages,websiteConnecting} from './generator-tabs.js';
 import {createGenerator} from './generator-ui.js';
@@ -887,6 +888,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSidebar()});
 window.addEventListener('DOMContentLoaded',icons);
 async function init(){icons();try{const boot=await api('/api/bootstrap');state.csrf=boot.csrf;if(boot.hostedPcRelay)void runCompanionRelay();state.providers=boot.providers;state.defaultProvider=boot.defaultProvider;state.savedAgents=boot.savedAgents||[];state.pc=boot.pc.connected;state.globalPC=boot.pc;state.quickProviders=boot.quickProviders||[];state.preferences={...state.preferences,...boot.preferences};state.agent={...state.agent,...boot.agent};for(const c of state.chats)c.agent.sites=boot.agent.sites;if(chat())state.agent=chat().agent;applyZoom(state.preferences.zoom);render();void updateAgentPresence();await fetchModels();if(state.defaultProvider){const selected=state.catalog.find(m=>m.provider===state.defaultProvider&&canUse(m));state.selected=selected||null;renderHeader();if(!selected)notice('Your default provider has no available chat model. Refresh its connection or choose another provider.');}}catch(e){notice(e.message)}}
 if(document.modelContext?.registerTool){try{document.modelContext.registerTool({name:'list_session_chats',description:'List conversations in the current visit. Does not include message contents or credentials.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:true},execute:()=>({chats:state.chats.map(c=>({id:c.id,title:c.title})),persistence:'none'})});document.modelContext.registerTool({name:'stage_message_draft',description:'Place text in the message composer without sending it.',inputSchema:{type:'object',properties:{text:{type:'string',maxLength:60000}},required:['text'],additionalProperties:false},annotations:{readOnlyHint:false},execute:input=>{if(typeof input?.text!=='string'||input.text.length>60000)throw new Error('A text draft of at most 60,000 characters is required.');$('#message-input').value=input.text;resizeInput();return{staged:true,sent:false}}})}catch{}}
+if(isMobileBrowser(navigator))openModal('mobile-notice',mobileNoticeMarkup());
 init();
 
 const appClientId=crypto.randomUUID();let presenceBusy=false;
