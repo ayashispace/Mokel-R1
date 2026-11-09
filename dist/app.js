@@ -346,7 +346,10 @@ async function attachPrompt(file){if(!file)return;try{if(!/\.(txt|md)$/i.test(fi
 
 let agentPoll=null;
 function modeDialog(){
- openModal('modes','<button class="provider-back" data-action="settings">'+icon('arrow-left')+' Settings</button><h2>Choose how you connect.</h2><p>Choose a connected website, an API model, or a prompt generator.</p><div class="mode-options"><button class="mode-choice" data-action="choose-mode" data-id="agent" aria-pressed="'+(currentMode()==='agent')+'">'+icon('bot')+'<span><strong>Agent Mode</strong><small>Send messages through a connected, signed-in website tab.</small></span>'+icon('chevron-right')+'</button><button class="mode-choice" data-action="choose-mode" data-id="api" aria-pressed="'+(currentMode()==='api')+'">'+icon('key-round')+'<span><strong>API Mode</strong><small>Use your provider keys or a local model server, including Ollama.</small></span>'+icon('chevron-right')+'</button><button class="mode-choice" data-action="choose-mode" data-id="generator" aria-pressed="'+(currentMode()==='generator')+'">'+icon('sparkles')+'<span><strong>Generator Mode</strong><small>Turn ideas into detailed prompts, with questions and resumable long outputs.</small></span>'+icon('chevron-right')+'</button></div><p class="small-note">Your choice applies to this chat and becomes the default for new chats. Each reply shows where it came from.</p><div id="mode-error" class="form-error" role="alert"></div>');
+ openModal('modes','<button class="provider-back" data-action="settings">'+icon('arrow-left')+' Settings</button><h2>Choose how you connect.</h2><p>Choose Agent Mode, API Mode, or explore other modes.</p><div class="mode-options"><button class="mode-choice" data-action="choose-mode" data-id="agent" aria-pressed="'+(currentMode()==='agent')+'">'+icon('bot')+'<span><strong>Agent Mode</strong><small>Send messages through a connected, signed-in website tab.</small></span>'+icon('chevron-right')+'</button><button class="mode-choice" data-action="choose-mode" data-id="api" aria-pressed="'+(currentMode()==='api')+'">'+icon('key-round')+'<span><strong>API Mode</strong><small>Use your provider keys or a local model server, including Ollama.</small></span>'+icon('chevron-right')+'</button><button class="mode-choice" data-action="other-modes" aria-haspopup="dialog">'+icon('ellipsis')+'<span><strong>Others</strong><small>Explore additional modes.</small></span>'+icon('chevron-right')+'</button></div><p class="small-note">Your choice applies to this chat and becomes the default for new chats. Each reply shows where it came from.</p><div id="mode-error" class="form-error" role="alert"></div>');
+}
+function otherModesDialog(){
+ openModal('other-modes','<button class="provider-back" data-action="modes">'+icon('arrow-left')+' Switch mode</button><h2>Others</h2><div class="mode-options"><button class="mode-choice" data-action="choose-mode" data-id="generator" aria-pressed="'+(currentMode()==='generator')+'">'+icon('sparkles')+'<span><strong>Generator Mode</strong><small>Turn ideas into detailed prompts, with questions and resumable long outputs.</small></span>'+icon('chevron-right')+'</button></div><div id="mode-error" class="form-error" role="alert"></div>');
 }
 async function chooseMode(mode){
  const old=chat();
@@ -728,6 +731,7 @@ document.addEventListener('click',async e=>{const b=e.target.closest('[data-acti
  else if(a==='choose-chat-file')$('#chat-file-input').click();
  else if(a==='load-chat-confirm')await applyChatImport();
  else if(a==='modes')modeDialog();
+ else if(a==='other-modes')otherModesDialog();
  else if(a==='choose-mode'){b.disabled=true;try{await chooseMode(id)}catch(error){if($('#mode-error'))$('#mode-error').textContent=error.message;else notice(error.message)}finally{b.disabled=false}}
  else if(a==='agent')await agentDialog();
  else if(a==='agent-create')await agentDialog(true,true);
