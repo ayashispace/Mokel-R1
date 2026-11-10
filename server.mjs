@@ -499,7 +499,7 @@ const server=http.createServer(async(req,res)=>{
    }
    const token=String(req.headers.authorization||'').replace(/^Bearer /,''),c=androidCompanions.authorized(token,undefined,true),owner=tenants.get(c.owner);if(!owner)throw Error('Mokel session expired.');owner.lastSeen=Date.now();
    if(route==='pull'){const jobs=await c.relay.pull();json(res,{jobs});return;}
-   if(route==='result'){c.relay.finish(data.id,data.result,data.error);json(res,{ok:true});return;}
+   if(route==='result'){json(res,androidCompanions.finish(c,data));return;}
    if(route==='disconnect'){androidCompanions.disconnect(token);await requestContext.run(owner,async()=>{if(settings.pc?.token===token){settings.pc=null;save();}for(const [thread,binding]of chatSettings.chats)if(binding.pc?.token===token){chatSettings.set(thread,null);nativePC.disable(thread);}});json(res,{ok:true});return;}
    json(res,{error:'Not found.'},404);
   }catch(error){json(res,{error:error.message},400);}return;

@@ -16,6 +16,8 @@ test('a phone pairs with one web session, status travels over the native relay, 
   const batch=await(await post('/api/android-companion/pull',{},app)).json();assert.equal(batch.jobs.length,1);const job=batch.jobs[0];
   const result=job.route==='/status'?{connected:true,workspace:'android://workspace',workspaceSelection:true,safeEdits:true,platform:'android',commandShell:null,durableExecution:true,batchPreflight:true}:{workspace:'android://workspace'};
   assert.equal((await post('/api/android-companion/result',{id:job.id,result},app)).status,200);
+  assert.equal((await post('/api/android-companion/result',{id:job.id,result},app)).status,200,'A lost acknowledgement must not stop the Companion');
+  assert.equal((await post('/api/android-companion/result',{id:job.id,result:{output:'changed'}},app)).status,400);
  }
  const status=await(await pending).json();assert.equal(status.connected,true);assert.equal(status.kind,'android');assert.equal(status.platform,'android');
  const other=await fetch(base+'/api/bootstrap'),otherBoot=await other.json(),otherHeaders={'Content-Type':'application/json',Cookie:other.headers.get('set-cookie').split(';')[0],'X-CSRF-Token':otherBoot.csrf};
