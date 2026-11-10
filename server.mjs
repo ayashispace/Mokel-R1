@@ -333,6 +333,7 @@ async function apiScoped(req,res,url){
   if(Object.hasOwn(data,'zoom')){if(!Number.isInteger(data.zoom)||data.zoom<70||data.zoom>150)throw new Error('Choose a zoom level between 70% and 150%.');next.zoom=data.zoom;}
   if(Object.hasOwn(data,'defaultModel')){if(data.defaultModel===null)delete next.defaultModel;else{const p=requireString(data.defaultModel?.provider,80),id=requireString(data.defaultModel?.id,200);lookupProvider(p);if(!isConnected(p))throw Error('Connect the default model’s provider first.');const catalog=models.get(p)||await catalogFor(p,settings.keys[p]);if(!catalog.models.some(m=>m.id===id&&m.supported&&!m.blockedReason))throw Error('Choose an available chat model.');next.defaultModel={provider:p,id};}}
   if(Object.hasOwn(data,'mode')){if(!['api','agent','generator'].includes(data.mode))throw new Error('Choose API, Agent or Generator Mode.');next.mode=data.mode;}
+  if(Object.hasOwn(data,'switchTabs')){if(typeof data.switchTabs!=='boolean')throw Error('Choose whether automatic tab switching is enabled.');next.switchTabs=data.switchTabs;}
   settings.preferences=next;save();json(res,{preferences:next});return;
  }
  if(url.pathname==='/api/models'&&req.method==='GET'){
@@ -490,41 +491,42 @@ const server=http.createServer(async(req,res)=>{
    req.mokelBody=input;
    const owner=tenantForBridge(req,route,input);if(!owner){json(res,{error:'This browser connection is unknown or expired. Reconnect it from Mokel R1.'},401);return;}
    await requestContext.run(owner,async()=>{
-   if(route==='/api/agent/bridge/prepare'){json(res,agentBridge.prepare(input.code));return;}
-   if(route==='/api/agent/bridge/setup-status'){json(res,agentBridge.setupStatus(input));return;}
+   const bridgeJson=(data,status=200)=>json(res,{...data,switchTabs:settings.preferences.switchTabs!==false},status);
+   if(route==='/api/agent/bridge/prepare'){bridgeJson(agentBridge.prepare(input.code));return;}
+   if(route==='/api/agent/bridge/setup-status'){bridgeJson(agentBridge.setupStatus(input));return;}
    if(route==='/api/agent/bridge/claim'){
     if(agentBridge.prepare(input.code).target.presentation==='live'&&input.liveVersion!==1)throw Error('Live website requires Browser Bridge 0.7.0. Update and reload the bridge, then reconnect.');
     if(input.deviceKey!==undefined&&!/^[a-f0-9]{64}$/.test(input.deviceKey))throw new Error('Invalid browser key.');
     const paired=agentBridge.claim(input.code,input.url,origin,input.selectors,input.externalFallback===true);
     if(agentBridge.get(paired.thread)?.bridge.connection?.token)bridgeTokenOwners.set(agentBridge.get(paired.thread).bridge.connection.token,owner.id);
     if(input.deviceKey)agentBridge.get(paired.thread).bridge.connection.deviceId=savedAgents.register(input.deviceKey,origin);
-    json(res,{...paired,nativeWait:true});return;
+    bridgeJson({...paired,nativeWait:true});return;
    }
    if(route==='/api/agent/bridge/reconnect/pull'||route==='/api/agent/bridge/reconnect/result'){
     const device=savedAgents.authorize(String(req.headers.authorization||'').replace(/^Bearer /,''),origin);
-    if(route.endsWith('/pull'))json(res,savedAgents.pull(device.id));else{savedAgents.finish(input,device.id);json(res,{ok:true});}return;
+    if(route.endsWith('/pull'))bridgeJson(savedAgents.pull(device.id));else{savedAgents.finish(input,device.id);bridgeJson({ok:true});}return;
    }
-   if(route==='/api/agent/bridge/heartbeat'&&agentBridge.disconnected(String(req.headers.authorization||'').replace(/^Bearer /,''),origin)){json(res,{disconnected:true});return;}
+   if(route==='/api/agent/bridge/heartbeat'&&agentBridge.disconnected(String(req.headers.authorization||'').replace(/^Bearer /,''),origin)){bridgeJson({disconnected:true});return;}
    const {bridge,thread}=agentBridge.authorize(String(req.headers.authorization||'').replace(/^Bearer /,''),origin);
-   if(route==='/api/agent/bridge/native-wait'){await new Promise(resolve=>setTimeout(resolve,1000));json(res,{ok:true});return;}
+   if(route==='/api/agent/bridge/native-wait'){await new Promise(resolve=>setTimeout(resolve,1000));bridgeJson({ok:true});return;}
    if(route.startsWith('/api/agent/bridge/live/')){
     if(!bridge.live)throw Error('This connection is not a live website.');
-    if(route==='/api/agent/bridge/live/frame'){bridge.live.frame(input);json(res,{ok:true});return;}
-    if(route==='/api/agent/bridge/live/pull'){json(res,await bridge.live.pull());return;}
-    if(route==='/api/agent/bridge/live/status'){bridge.live.setStatus(input);json(res,{ok:true});return;}
-    if(route==='/api/agent/bridge/live/location'){json(res,agentBridge.liveLocation(thread,input.url));return;}
+    if(route==='/api/agent/bridge/live/frame'){bridge.live.frame(input);bridgeJson({ok:true});return;}
+    if(route==='/api/agent/bridge/live/pull'){bridgeJson(await bridge.live.pull());return;}
+    if(route==='/api/agent/bridge/live/status'){bridge.live.setStatus(input);bridgeJson({ok:true});return;}
+    if(route==='/api/agent/bridge/live/location'){bridgeJson(agentBridge.liveLocation(thread,input.url));return;}
    }
-   if(route==='/api/agent/bridge/pull'){json(res,await bridge.pull());return;}
-   if(route==='/api/agent/bridge/native-location'){json(res,agentBridge.nativeLocation(thread,input.url));return;}
-   if(route==='/api/agent/bridge/native-delivered'){json(res,nativeIntro.delivered(thread,input)||nativeHistory.delivered(thread,input)||nativePC.delivered(thread,input));return;}
-   if(route==='/api/agent/bridge/native-activity'){if(typeof input.running!=='boolean')throw Error('Invalid activity status.');if(input.firstUserMessage!==undefined){const title=requireString(input.firstUserMessage,200).replace(/\s+/g,' ').trim().slice(0,42);if(!bridge.nativeFirstUserMessage)bridge.nativeFirstUserMessage=title;}bridge.nativeRunning=input.running;json(res,{ok:true});return;}
-   if(route==='/api/agent/bridge/native-invalid'){const result=nativePC.invalidProposal(thread,input);json(res,{...result,thread,reviewRequired:!result.duplicate});return;}
-   if(route==='/api/agent/bridge/native-pc'){let result;try{result=nativePC.propose(thread,input);}catch(error){if(input.mokelSession!==nativePC.current(thread)?.session)throw error;result=nativePC.invalidProposal(thread,input,error.message);json(res,{...result,thread,reviewRequired:!result.duplicate});return;}if(!result.duplicate){const actions=nativePC.actions(thread).filter(a=>a.group===result.group);actions.forEach(a=>approvalPolicy.capture(a));void approvalPolicy.run(actions).catch(()=>{});}const reviewRequired=nativePC.actions(thread).some(a=>a.group===result.group&&a.status==='pending'&&!approvalPolicy.authorized(a));json(res,{...result,thread,reviewRequired});return;}
-   if(route==='/api/agent/bridge/heartbeat'){const pc=nativePC.current(thread),open=!!bridge.openRequested;bridge.openRequested=false;json(res,{ok:true,open,delivery:nativeIntro.status(thread)?.state==='waiting'?nativeIntro.delivery(thread):nativeHistory.delivery(thread)||(!nativeHistory.current(thread)||['sent','error'].includes(nativeHistory.status(thread)?.state)?nativePC.delivery(thread):null),pc:pc?{session:pc.session}:null});return;}
-   if(route==='/api/agent/bridge/progress'){bridge.progress(input);json(res,{ok:true});return;}
-   if(route==='/api/agent/bridge/result'){bridge.complete(input);json(res,{ok:true});return;}
-   if(route==='/api/agent/bridge/disconnect'){bridge.disconnect(typeof input.error==='string'?input.error:undefined);json(res,{ok:true});return;}
-   json(res,{error:'Not found.'},404);
+   if(route==='/api/agent/bridge/pull'){bridgeJson(await bridge.pull());return;}
+   if(route==='/api/agent/bridge/native-location'){bridgeJson(agentBridge.nativeLocation(thread,input.url));return;}
+   if(route==='/api/agent/bridge/native-delivered'){bridgeJson(nativeIntro.delivered(thread,input)||nativeHistory.delivered(thread,input)||nativePC.delivered(thread,input));return;}
+   if(route==='/api/agent/bridge/native-activity'){if(typeof input.running!=='boolean')throw Error('Invalid activity status.');if(input.firstUserMessage!==undefined){const title=requireString(input.firstUserMessage,200).replace(/\s+/g,' ').trim().slice(0,42);if(!bridge.nativeFirstUserMessage)bridge.nativeFirstUserMessage=title;}bridge.nativeRunning=input.running;bridgeJson({ok:true});return;}
+   if(route==='/api/agent/bridge/native-invalid'){const result=nativePC.invalidProposal(thread,input);bridgeJson({...result,thread,reviewRequired:!result.duplicate});return;}
+   if(route==='/api/agent/bridge/native-pc'){let result;try{result=nativePC.propose(thread,input);}catch(error){if(input.mokelSession!==nativePC.current(thread)?.session)throw error;result=nativePC.invalidProposal(thread,input,error.message);bridgeJson({...result,thread,reviewRequired:!result.duplicate});return;}if(!result.duplicate){const actions=nativePC.actions(thread).filter(a=>a.group===result.group);actions.forEach(a=>approvalPolicy.capture(a));void approvalPolicy.run(actions).catch(()=>{});}const reviewRequired=nativePC.actions(thread).some(a=>a.group===result.group&&a.status==='pending'&&!approvalPolicy.authorized(a));bridgeJson({...result,thread,reviewRequired});return;}
+   if(route==='/api/agent/bridge/heartbeat'){const pc=nativePC.current(thread),open=!!bridge.openRequested;bridge.openRequested=false;bridgeJson({ok:true,open,delivery:nativeIntro.status(thread)?.state==='waiting'?nativeIntro.delivery(thread):nativeHistory.delivery(thread)||(!nativeHistory.current(thread)||['sent','error'].includes(nativeHistory.status(thread)?.state)?nativePC.delivery(thread):null),pc:pc?{session:pc.session}:null});return;}
+   if(route==='/api/agent/bridge/progress'){bridge.progress(input);bridgeJson({ok:true});return;}
+   if(route==='/api/agent/bridge/result'){bridge.complete(input);bridgeJson({ok:true});return;}
+   if(route==='/api/agent/bridge/disconnect'){bridge.disconnect(typeof input.error==='string'?input.error:undefined);bridgeJson({ok:true});return;}
+   bridgeJson({error:'Not found.'},404);
    });
   }catch(e){json(res,{error:e.message},e.code||400);}return;
  }

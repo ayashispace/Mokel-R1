@@ -1,13 +1,15 @@
 const ext=globalThis.browser||chrome;
+let automaticTabSwitching=true;
 let config,token,active=true,heartbeat,connectionTarget,currentJob=null,progressQueue=Promise.resolve(),liveController,nativeTimer,nativePulse,nativeReceipt=null,nativeInFlight=null,nativeWake=null,nativePulseWake=null;
 const status=text=>document.querySelector('#status').textContent=text;
 async function call(route,data={}){
  const response=await fetch(config.server+'/api/agent/bridge/'+route,{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify(data),signal:AbortSignal.timeout(route==='pull'?30000:15000)});
- const result=await response.json();if(!response.ok)throw Error(result.error||'Mokel R1 could not complete this request.');return result;
+ const result=await response.json();if(!response.ok)throw Error(result.error||'Mokel R1 could not complete this request.');if(typeof result.switchTabs==='boolean')automaticTabSwitching=result.switchTabs;return result;
 }
 function urlKey(value){return globalThis.mokelConversationUrl.key(value);}
-async function focusTab(tabId,bringToFront=true){const tab=await ext.tabs.update(tabId,{active:true});if(bringToFront&&Number.isInteger(tab.windowId))await ext.windows.update(tab.windowId,{focused:true});}
+async function focusTab(tabId,bringToFront=true){if(!automaticTabSwitching)return;const tab=await ext.tabs.update(tabId,{active:true});if(bringToFront&&Number.isInteger(tab.windowId))await ext.windows.update(tab.windowId,{focused:true});}
 async function focusMokel(thread,bringToFront=true){
+ if(!automaticTabSwitching)return;
  const origin=new URL(config.server).origin;
  const tabs=await ext.tabs.query({url:origin+'/*'});
  const tab=tabs.find(t=>t.id===config.appTabId)||tabs.find(t=>t.active)||tabs[0];
