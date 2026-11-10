@@ -1,3 +1,4 @@
+import {AndroidCompanions} from './lib/android-companion.mjs';
 import {CompanionRelay} from './lib/companion-relay.mjs';
 import {packBackup,unpackBackup} from './lib/workspace-backup.mjs';
 import {decodeChat} from './dist/chat-files.js';
@@ -37,6 +38,7 @@ import {canAutoReport,actionConfirmation} from './dist/action-results.js';
 const root=path.dirname(fileURLToPath(import.meta.url));
 const publicRoot=path.join(root,'dist');
 const port=Number(process.env.PORT||4173);
+const androidCompanions=new AndroidCompanions();
 const hosted=!!process.env.RENDER||process.env.MOKEL_HOSTED==='1',dataRoot=process.env.MOKEL_DATA_DIR||path.join(root,'data');
 let initialSettings={keys:{},pc:null},persistSettings=()=>{},localLedgerConfig=null;
 if(!hosted){
@@ -102,7 +104,8 @@ function processFile(input){return new Promise((resolve,reject)=>{
 })}
 async function companion(endpoint,bodyData,config=settings.pc){
  if(config?.kind==='github')return githubWorkspace.dispatch(endpoint,bodyData,config);
- if(!config?.token)throw new Error('Connect the Windows companion first.');
+ if(config?.kind==='android')return androidCompanions.request(activeTenant().id,config.token,endpoint,bodyData,()=>{const action=bodyData?.executionId&&pending.get(bodyData.executionId);if(action){if(action.status!=='running')throw Error('This action is no longer running.');nativePC.assertCurrent(action);chatSettings.assertCurrent(action);if(action.approvedBy&&!approvalPolicy.authorized(action))throw Error('Automatic approval was revoked.');}});
+ if(!config?.token)throw new Error('Connect the Companion first.');
  if(hosted)return activeTenant().companionRelay.request(endpoint,bodyData,config.token,()=>{const action=bodyData?.executionId&&pending.get(bodyData.executionId);if(action){if(action.status!=='running')throw Error('This PC request is no longer running.');nativePC.assertCurrent(action);chatSettings.assertCurrent(action);if(action.approvedBy&&!approvalPolicy.authorized(action))throw Error('Automatic approval was revoked before execution.');}});
  const response=await fetch('http://127.0.0.1:7821'+endpoint,{method:bodyData?'POST':'GET',headers:{Authorization:'Bearer '+config.token,'Content-Type':'application/json'},body:bodyData?JSON.stringify(bodyData):undefined,signal:AbortSignal.timeout(endpoint==='/workspace/pick'?300000:bodyData?.action?.type==='run_command'?125000:65000)});
  const result=await response.json();if(!response.ok)throw Object.assign(new Error(result.error||'The companion could not complete this action.'),{details:result.details});return result;
@@ -114,7 +117,7 @@ async function checkedWorkspace(config){
  // Old saved connections migrate to the companion's original workspace, never to an arbitrary path.
  if(config.workspace&&config.workspace!==result.workspace)throw new Error('The workspace folder changed. Select it again before continuing.');
  config.workspace=result.workspace;
- config.durableExecution=!!status.durableExecution;config.batchPreflight=!!status.batchPreflight;
+ config.platform=status.platform||'win32';config.commandShell=status.commandShell||(status.powershell?'powershell':null);config.durableExecution=!!status.durableExecution;config.batchPreflight=!!status.batchPreflight;
  return result.workspace;
 }
 
@@ -310,7 +313,7 @@ async function apiScoped(req,res,url){
   }
   const restoredHistory=data.history===undefined?[]:safeHistory(data.history);
   const sharedPrompt=combinedPrompt(data.savedGlobalPrompt??settings.preferences.systemPrompt,data.systemPrompt)+(pc&&binding.pc?.kind==='github'?'\n'+githubInstructions:'');
-  const promptInput={text,history:restoredHistory,sharedPrompt,usePC:pc,workspace,results,ledger:pc?taskLedger(actionLedger,thread,binding.revision):null};
+  const promptInput={text,platform:binding.pc?.platform,history:restoredHistory,sharedPrompt,usePC:pc,workspace,results,ledger:pc?taskLedger(actionLedger,thread,binding.revision):null};
   const configKey=crypto.createHash('sha256').update(JSON.stringify([thread,connectionId,sharedPrompt,pc,workspace,binding.revision])).digest('hex');
   const channel=replyStream(req,res,data.stream===true,pc);
   const websiteReply=await agentBridge.send({thread,connectionId,text:websiteMessage(promptInput),promptPlan:{key:configKey,compact:websiteMessage({...promptInput,compact:true}),forceFull:restoredHistory.length>0},includeImages:true,onProgress:channel.progress});
@@ -398,11 +401,11 @@ async function apiScoped(req,res,url){
   const prompt=combinedPrompt(data.savedGlobalPrompt??settings.preferences.systemPrompt,data.systemPrompt)+(pc&&!greetingOnly(history.at(-1)?.text)?'\nCurrent workspace: '+binding.pc.workspace+'\n'+(binding.pc.kind==='github'?githubInstructions+'\n':'')+projectLedger.summary(binding.pc.workspace):'');
   const channel=replyStream(req,res,data.stream===true,pc);
   try{
-   const latest=pcTaskText(history),casual=pc&&greetingOnly(latest),known=pc&&binding.pc?.kind!=='github'?lockProposal(latest):null;
-   let raw=known?'':await generate(id,settings.keys[id],model,history,pc&&!casual,fetch,settings.customProviders,prompt,{onText:channel.progress,base:settings.providerBases[id]});
+   const latest=pcTaskText(history),casual=pc&&greetingOnly(latest),known=pc&&binding.pc?.kind!=='github'?lockProposal(latest,binding.pc?.platform):null;
+   let raw=known?'':await generate(id,settings.keys[id],model,history,pc&&!casual,fetch,settings.customProviders,prompt,{platform:binding.pc?.platform,onText:channel.progress,base:settings.providerBases[id]});
    let reply=known||(pc&&!casual?parseActions(raw):{text:raw,actions:[]}),pcFailure=false;
    if(pc&&!casual&&!known&&requestsPCAction(latest)&&!reply.actions.length){
-    raw=await generate(id,settings.keys[id],model,history,true,fetch,settings.customProviders,prompt+'\n\n'+PC_FORMAT_REPAIR,{base:settings.providerBases[id]});reply=parseActions(raw);
+    raw=await generate(id,settings.keys[id],model,history,true,fetch,settings.customProviders,prompt+'\n\n'+PC_FORMAT_REPAIR,{platform:binding.pc?.platform,base:settings.providerBases[id]});reply=parseActions(raw);
     if(!reply.actions.length){reply={text:PC_FAILURE,actions:[]};pcFailure=true;}
    }
    const group=crypto.randomUUID();
@@ -416,6 +419,7 @@ async function apiScoped(req,res,url){
   const data=await body(req,10000),thread=data.scope==='chat'?requireString(data.thread,80):null;
   const previous=thread?chatSettings.get(thread).pc:settings.pc;
   if(req.method==='DELETE'){
+   if(thread&&previous?.kind==='android'&&settings.pc?.token!==previous.token&&![...chatSettings.chats].some(([id,b])=>id!==thread&&b.pc?.token===previous.token)){try{androidCompanions.disconnect(previous.token);}catch{}}
    if(thread)chatSettings.set(thread,null);else{settings.pc=null;save();}
    json(res,{connected:false,workspace:''});return;
   }
@@ -428,13 +432,17 @@ async function apiScoped(req,res,url){
   if(!status.workspaceSelection)throw new Error('Update and restart the companion using the download below, then paste its new token. This version does not support choosing a workspace.');
   const requested=data.workspace===undefined?(config.workspace||previous?.workspace||status.workspace):requireString(data.workspace,2000);
   const checked=await companion('/workspace/validate',{workspace:requested},config);
-  config.workspace=checked.workspace;
+  config.workspace=checked.workspace;config.platform=status.platform||'win32';config.commandShell=status.commandShell||(status.powershell?'powershell':null);
   if(thread){chatSettings.set(thread,config);json(res,chatSettings.public(thread));return;}
   settings.pc=config;save();json(res,{connected:true,workspace:config.workspace});return;
  }
+ if(url.pathname==='/api/pc/android/pair'&&req.method==='POST'){
+  const data=await body(req,1000),scope=data.scope==='global'?'global':'chat',thread=scope==='global'?'@global':requireString(data.thread,80);if(scope==='chat')chatSettings.get(thread);
+  const pair=androidCompanions.pair(activeTenant().id,thread,scope);json(res,{...pair,server:process.env.RENDER?'https://mokel-r1.onrender.com':'http://localhost:'+port});return;
+ }
  if(url.pathname==='/api/pc/status'&&req.method==='GET'){
   const thread=url.searchParams.get('thread'),config=thread?chatSettings.get(thread).pc:settings.pc;
-  const workspace=await checkedWorkspace(config);json(res,{connected:true,workspace,...(config.kind==='github'?{kind:'github'}:{}),...(thread?{approvalMode:chatSettings.get(thread).approvalMode||'ask'}:{})});return;
+  const workspace=await checkedWorkspace(config);json(res,{connected:true,workspace,...(['github','android'].includes(config.kind)?{kind:config.kind}:{}),platform:config.platform||'win32',...(thread?{approvalMode:chatSettings.get(thread).approvalMode||'ask'}:{})});return;
  }
  if(['/api/pc/pick','/api/pc/pick/cancel'].includes(url.pathname)&&req.method==='POST'){
   const data=await body(req,10000),config=data.scope==='chat'?chatSettings.get(requireString(data.thread,80)).pc:settings.pc;
@@ -479,6 +487,23 @@ const server=http.createServer(async(req,res)=>{
  res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' ws://localhost:"+port+" ws://127.0.0.1:"+port+" wss:; frame-src https: http://localhost:* http://127.0.0.1:* http://[::1]:*; object-src 'none'; base-uri 'self'; frame-ancestors 'none'");
  if(!ALLOWED_HOSTS.has(req.headers.host)){json(res,{error:'Invalid host.'},403);return}
  if(req.method==='GET'&&req.url==='/healthz'){res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end('{"ok":true}');return;}
+ if(req.url.startsWith('/api/android-companion/')){
+  if(req.method!=='POST'||req.headers.origin){json(res,{error:'Only the Companion can use this endpoint.'},403);return;}
+  try{
+   const route=req.url.slice('/api/android-companion/'.length),data=await body(req,2500000);
+   if(route==='claim'){
+    const {token,connection}=androidCompanions.claim(data.code),owner=tenants.get(connection.owner);
+    if(!owner)throw Error('The Mokel session expired. Reopen Mokel and pair again.');
+    await requestContext.run(owner,async()=>{const config={kind:'android',platform:'android',commandShell:null,token,workspace:'android://workspace',durableExecution:true,batchPreflight:true};if(connection.scope==='global'){settings.pc=config;save();}else chatSettings.set(connection.thread,config);});
+    json(res,{token});return;
+   }
+   const token=String(req.headers.authorization||'').replace(/^Bearer /,''),c=androidCompanions.authorized(token,undefined,true),owner=tenants.get(c.owner);if(!owner)throw Error('Mokel session expired.');owner.lastSeen=Date.now();
+   if(route==='pull'){const jobs=await c.relay.pull();json(res,{jobs});return;}
+   if(route==='result'){c.relay.finish(data.id,data.result,data.error);json(res,{ok:true});return;}
+   if(route==='disconnect'){androidCompanions.disconnect(token);await requestContext.run(owner,async()=>{if(settings.pc?.token===token){settings.pc=null;save();}for(const [thread,binding]of chatSettings.chats)if(binding.pc?.token===token){chatSettings.set(thread,null);nativePC.disable(thread);}});json(res,{ok:true});return;}
+   json(res,{error:'Not found.'},404);
+  }catch(error){json(res,{error:error.message},400);}return;
+ }
  if(req.url.startsWith('/api/agent/bridge/')){
   const origin=req.headers.origin;
   if(typeof origin!=='string'||!(/^(chrome-extension|moz-extension):\/\/[a-zA-Z0-9-]+$/).test(origin)){json(res,{error:'A paired browser extension is required.'},403);return;}

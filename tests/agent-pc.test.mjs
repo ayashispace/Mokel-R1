@@ -50,6 +50,7 @@ test('Agent Mode creates and edits real files only through approved cards, with 
  });
  fs.copyFileSync(path.join(root,'companion','execution-store.mjs'),path.join(temp,'execution-store.mjs'));
  fs.copyFileSync(path.join(root,'companion','powershell.mjs'),path.join(temp,'powershell.mjs'));
+ fs.copyFileSync(path.join(root,'companion','macos.mjs'),path.join(temp,'macos.mjs'));
  fs.copyFileSync(path.join(root,'companion','initialization.mjs'),path.join(temp,'initialization.mjs'));
  // Run the real companion in a disposable folder, changing only its test port.
  fs.writeFileSync(path.join(temp,'companion.mjs'),fs.readFileSync(path.join(root,'companion','companion.mjs'),'utf8').replaceAll('7821','44174'));

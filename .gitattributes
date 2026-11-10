@@ -1,0 +1,2 @@
+# macOS launchers must remain Unix text even when packaged on Windows.
+*.command text eol=lf

@@ -5,7 +5,7 @@ function ready(c,pattern){return new Promise((resolve,reject)=>{let out='';const
 test('hosted PC connects through a session relay and approved actions reach a real companion', {timeout:45000},async t=>{
  const dir=fs.mkdtempSync(path.join(root,'tests','.hosted-pc-')),children=[];let stopped=false;
  t.after(async()=>{stopped=true;for(const c of children)if(c.exitCode===null){const exited=once(c,'exit');c.kill();await exited;}fs.rmSync(dir,{recursive:true,force:true});});
- for(const name of ['execution-store.mjs','powershell.mjs','initialization.mjs'])fs.copyFileSync(path.join(root,'companion',name),path.join(dir,name));
+ for(const name of ['execution-store.mjs','powershell.mjs','macos.mjs','initialization.mjs'])fs.copyFileSync(path.join(root,'companion',name),path.join(dir,name));
  fs.writeFileSync(path.join(dir,'companion.mjs'),fs.readFileSync(path.join(root,'companion/companion.mjs'),'utf8').replaceAll('7821','44289'));
  const pc=launch([path.join(dir,'companion.mjs')]);children.push(pc);const token=(await ready(pc,/Token: ([a-f0-9]+)/))[1];
  const srv=launch(['--import','./tests/fixtures/openrouter-fetch.mjs','server.mjs'],{PORT:'44288',MOKEL_HOSTED:'1'});children.push(srv);await ready(srv,/Mokel R1 ready/);const base='http://127.0.0.1:44288';

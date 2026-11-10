@@ -1,3 +1,4 @@
+import {runMacCommand,pickMacWorkspace} from './macos.mjs';
 import {ExecutionStore} from './execution-store.mjs';
 import {initializeWorkspace} from './initialization.mjs';
 import {runPowerShell} from './powershell.mjs';
@@ -35,7 +36,8 @@ function workspaceRoot(value){
 }
 let picker=null;
 function pickWorkspace(){
- if(process.platform!=='win32')throw new Error('Folder selection requires Windows. Paste an absolute folder path instead.');
+ if(process.platform==='darwin'){if(picker)return picker.promise;const state=pickMacWorkspace();picker=state;state.promise=state.promise.finally(()=>{if(picker===state)picker=null;});return state.promise;}
+ if(process.platform!=='win32')throw new Error('Paste an absolute folder path for this operating system.');
  // Repeated clicks share one picker instead of opening hidden competing windows.
  if(picker)return picker.promise;
  const state={child:null,cancelled:false,promise:null};picker=state;
@@ -89,8 +91,8 @@ async function execute(a,root,expected){
  if(a.type==='write_file')return writeSafely(a,root,expected);
  if(a.type==='make_directory'){fs.mkdirSync(safePath(a.path,root),{recursive:true});return 'Created '+a.path}
  if(a.type==='delete_file'){const target=safePath(a.path,root);if(target===root)throw new Error('The workspace cannot be deleted.');requireRevision(target,expected);fs.unlinkSync(target);return 'Deleted '+a.path}
- if(a.type==='run_command')return runPowerShell(a.command,root);
- if(a.type==='open_url'){const url=new URL(a.url);if(!['https:','http:'].includes(url.protocol))throw new Error('Only HTTP and HTTPS links are allowed.');if(process.platform!=='win32')throw new Error('Opening links requires Windows.');const encoded=Buffer.from("Start-Process -FilePath '"+url.href.replaceAll("'","''")+"'",'utf16le').toString('base64');await new Promise((resolve,reject)=>{const c=spawn('powershell.exe',['-NoProfile','-NonInteractive','-EncodedCommand',encoded],{windowsHide:true,stdio:'ignore'});c.on('error',reject);c.on('close',code=>code===0?resolve():reject(new Error('Unable to open link.')))});return 'Opened '+url.href}
+ if(a.type==='run_command')return process.platform==='darwin'?runMacCommand(a.command,root):runPowerShell(a.command,root);
+ if(a.type==='open_url'){const url=new URL(a.url);if(!['https:','http:'].includes(url.protocol))throw new Error('Only HTTP and HTTPS links are allowed.');if(process.platform==='darwin'){await new Promise((resolve,reject)=>{const c=spawn('/usr/bin/open',[url.href],{stdio:'ignore',shell:false});c.once('error',reject);c.once('close',code=>code===0?resolve():reject(Error('Unable to open link.')));});return 'Opened '+url.href;}if(process.platform!=='win32')throw new Error('Opening links is unavailable on this operating system.');const encoded=Buffer.from("Start-Process -FilePath '"+url.href.replaceAll("'","''")+"'",'utf16le').toString('base64');await new Promise((resolve,reject)=>{const c=spawn('powershell.exe',['-NoProfile','-NonInteractive','-EncodedCommand',encoded],{windowsHide:true,stdio:'ignore'});c.on('error',reject);c.on('close',code=>code===0?resolve():reject(new Error('Unable to open link.')))});return 'Opened '+url.href}
  throw new Error('Unsupported action type.');
 }
 function recoveryCopy(action,root,expected){
@@ -121,7 +123,7 @@ const server=http.createServer(async(req,res)=>{
  const supplied=String(req.headers.authorization||'');
  const expected='Bearer '+token;
  if(supplied.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(supplied),Buffer.from(expected))){reply(res,401,{error:'The companion token is incorrect.'});return}
- if(req.url==='/status'&&req.method==='GET'){reply(res,200,{connected:true,workspace:root,workspaceSelection:true,safeEdits:true,preciseEdits:true,initialization:true,initializationTransient:true,pickerCancellation:true,powershell:true,durableExecution:true,recoveryCopies:true,batchPreflight:true,version:7});return}
+ if(req.url==='/status'&&req.method==='GET'){reply(res,200,{connected:true,workspace:root,workspaceSelection:true,safeEdits:true,preciseEdits:true,initialization:true,initializationTransient:true,pickerCancellation:true,platform:process.platform,commandShell:process.platform==='darwin'?'zsh':process.platform==='win32'?'powershell':null,powershell:process.platform==='win32',durableExecution:true,recoveryCopies:true,batchPreflight:true,version:7});return}
  if(!['/execute','/execution/history','/execution/recovery','/execution/preflight','/workspace/validate','/workspace/pick','/workspace/pick/cancel'].includes(req.url)||req.method!=='POST'){reply(res,404,{error:'Not found.'});return}
  try{let size=0;const chunks=[];for await(const b of req){size+=b.length;if(size>2*1024*1024)throw new Error('Action payload too large.');chunks.push(b)}const input=JSON.parse(Buffer.concat(chunks));if(req.url==='/workspace/pick/cancel'){reply(res,200,cancelPicker());return;}if(req.url==='/workspace/pick'){reply(res,200,await pickWorkspace());return;}const selected=workspaceRoot(input.workspace||root);if(req.url==='/workspace/validate'){reply(res,200,{workspace:selected});return;}if(req.url==='/execute'&&path.resolve(input.workspace||root)!==selected)throw new Error('The workspace folder changed. Select its current folder again.');if(req.url==='/execution/history'){reply(res,200,{actions:executions.history(selected)});return;}if(req.url==='/execution/recovery'){reply(res,200,executions.recovery(selected,input.id));return;}if(req.url==='/execution/preflight'){reply(res,200,preflight(input.items,selected));return;}const output=input.executionId?await executions.run({workspace:selected,id:input.executionId,action:input.action,expectedRevision:input.expectedRevision},()=>execute(input.action,selected,input.expectedRevision),()=>recoveryCopy(input.action,selected,input.expectedRevision)):await executions.serial(selected,()=>execute(input.action,selected,input.expectedRevision));reply(res,200,typeof output==='string'?{output}:output)}
  catch(e){reply(res,400,{error:e.message,...(e.details?{details:e.details}:{})})}
@@ -137,7 +139,7 @@ server.listen(7821,'127.0.0.1',()=>{
  console.log('Address: http://127.0.0.1:7821');
  console.log('Token: '+token);
  console.log('\nPaste the token into Mokel R1 > Your PC. Keep this window open.');
- console.log('File tools stay in each chat’s workspace. PowerShell requires approval of each exact command and is not confined by the workspace.');
+ console.log('File tools stay in each chat’s workspace. Commands use '+(process.platform==='darwin'?'zsh':'PowerShell')+' and follow the selected approval mode; the shell is not confined by the workspace.');
  console.log('Press Ctrl+C to stop.\n');
 });
 

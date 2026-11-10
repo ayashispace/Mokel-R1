@@ -30,3 +30,7 @@
 .dictation-controls{display:flex;gap:10px;margin:18px 0}.voice-modal textarea{width:100%;min-height:150px;resize:vertical}.voice-modal select{width:100%}#dictation-status{font-size:13px;line-height:1.6;color:#bdcfc5}.action-confirmation{padding:12px 14px;border-radius:8px;background:#18261e;color:#bddfc8;font-size:13px;overflow-wrap:anywhere}.action-confirmation.s-error{background:#30201e;color:#edb7ad}.action-confirmation.s-rejected{background:#242424;color:#bcbcbc}
 
 .chat-file-options{display:grid;gap:10px;margin:24px 0}.chat-files-button{flex-shrink:0}@media(max-width:700px){.header-actions{gap:3px}.chat-files-button{min-width:32px}}
+
+.settings-options > .setting-toggle { display:flex; align-items:center; gap:14px; text-align:left; border:1px solid #333; border-radius:12px; background:#202020; padding:18px; color:inherit; cursor:pointer; }
+.settings-options > .setting-toggle:hover { background:#292929; }
+.settings-options > .setting-toggle input { flex:0 0 auto; width:18px; height:18px; accent-color:#a6c7b5; }
