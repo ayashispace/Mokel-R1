@@ -17,3 +17,11 @@ Android's folder picker cannot grant other apps' private directories or unrestri
 The APK compiles and its signing certificate verifies. Pairing, session isolation, request relay and revocation have server integration tests. Actual Android folder access and background behavior still require a physical-device test. No Android device was attached during the initial build.
 
 The helper's native source and release signing key are kept outside the public web repository. The source project has a reusable local build script; private signing material must be backed up separately and must never be uploaded.
+
+## Connection reliability update
+
+Android action validation runs in the originating browser session, including Initialize. The relay hands the phone one request at a time so a failed result upload cannot strand other claimed requests. Transient network failures retry delivery without repeating a completed file operation. An expired result receipt does not stop the entire connection.
+
+The Companion screen shows connecting, connected, retrying, disconnected and error states. Disconnect stops local file access immediately and attempts server revocation with bounded network timeouts. If that acknowledgement cannot arrive, the screen explicitly says the phone is disconnected and the server lease will expire. Reconnect after Android stops the service or the server session expires.
+
+The mobile website hides local Ollama and closes the pairing dialog after a successful workspace check. The updated APK retains its existing display name and version. Server integration tests cover Initialize and revocation; physical-phone file-provider and background tests are still pending.
