@@ -104,7 +104,7 @@ function processFile(input){return new Promise((resolve,reject)=>{
 })}
 async function companion(endpoint,bodyData,config=settings.pc){
  if(config?.kind==='github')return githubWorkspace.dispatch(endpoint,bodyData,config);
- if(config?.kind==='android')return androidCompanions.request(activeTenant().id,config.token,endpoint,bodyData,()=>{const action=bodyData?.executionId&&pending.get(bodyData.executionId);if(action){if(action.status!=='running')throw Error('This action is no longer running.');nativePC.assertCurrent(action);chatSettings.assertCurrent(action);if(action.approvedBy&&!approvalPolicy.authorized(action))throw Error('Automatic approval was revoked.');}});
+ if(config?.kind==='android'){const owner=activeTenant();return androidCompanions.request(owner.id,config.token,endpoint,bodyData,()=>requestContext.run(owner,()=>{const action=bodyData?.executionId&&pending.get(bodyData.executionId);if(action){if(action.status!=='running')throw Error('This action is no longer running.');nativePC.assertCurrent(action);chatSettings.assertCurrent(action);if(action.approvedBy&&!approvalPolicy.authorized(action))throw Error('Automatic approval was revoked.');}}));}
  if(!config?.token)throw new Error('Connect the Companion first.');
  if(hosted)return activeTenant().companionRelay.request(endpoint,bodyData,config.token,()=>{const action=bodyData?.executionId&&pending.get(bodyData.executionId);if(action){if(action.status!=='running')throw Error('This PC request is no longer running.');nativePC.assertCurrent(action);chatSettings.assertCurrent(action);if(action.approvedBy&&!approvalPolicy.authorized(action))throw Error('Automatic approval was revoked before execution.');}});
  const response=await fetch('http://127.0.0.1:7821'+endpoint,{method:bodyData?'POST':'GET',headers:{Authorization:'Bearer '+config.token,'Content-Type':'application/json'},body:bodyData?JSON.stringify(bodyData):undefined,signal:AbortSignal.timeout(endpoint==='/workspace/pick'?300000:bodyData?.action?.type==='run_command'?125000:65000)});
@@ -498,7 +498,7 @@ const server=http.createServer(async(req,res)=>{
     json(res,{token});return;
    }
    const token=String(req.headers.authorization||'').replace(/^Bearer /,''),c=androidCompanions.authorized(token,undefined,true),owner=tenants.get(c.owner);if(!owner)throw Error('Mokel session expired.');owner.lastSeen=Date.now();
-   if(route==='pull'){const jobs=await c.relay.pull();json(res,{jobs});return;}
+   if(route==='pull'){const jobs=await c.relay.pull(1);json(res,{jobs});return;}
    if(route==='result'){json(res,androidCompanions.finish(c,data));return;}
    if(route==='disconnect'){androidCompanions.disconnect(token);await requestContext.run(owner,async()=>{if(settings.pc?.token===token){settings.pc=null;save();}for(const [thread,binding]of chatSettings.chats)if(binding.pc?.token===token){chatSettings.set(thread,null);nativePC.disable(thread);}});json(res,{ok:true});return;}
    json(res,{error:'Not found.'},404);

@@ -20,6 +20,17 @@ test('a phone pairs with one web session, status travels over the native relay, 
   assert.equal((await post('/api/android-companion/result',{id:job.id,result:{output:'changed'}},app)).status,400);
  }
  const status=await(await pending).json();assert.equal(status.connected,true);assert.equal(status.kind,'android');assert.equal(status.platform,'android');
+ const serve=async(promise,executing=false)=>{
+  let finished=false;promise.finally(()=>finished=true);
+  while(!finished){
+   const batch=await(await post('/api/android-companion/pull',{},app)).json();assert.ok(batch.jobs.length<=1,'Phone claims one request at a time');
+   for(const job of batch.jobs){const result=job.route==='/status'?{workspaceSelection:true,safeEdits:true,initializationTransient:true,platform:'android',durableExecution:true,batchPreflight:true}:job.route==='/execute'?{output:'# Phone workspace\n\n## main.js\nconsole.log("hello");',snapshotPath:'MOKEL-INITIALIZATION-test.md'}:job.route==='/execution/preflight'?{ok:true}:{workspace:'android://workspace'};assert.equal((await post('/api/android-companion/result',{id:job.id,result},app)).status,200);}
+   await new Promise(resolve=>setTimeout(resolve,10));
+  }
+  return await(await promise).json();
+ };
+ const initialized=await serve(post('/api/pc/initialize',{thread:'android-test',mode:'api'}));assert.equal(initialized.type,'initialize_workspace');
+ const completed=await serve(post('/api/pc/action',{id:initialized.id,decision:'approve'}));assert.equal(completed.status,'done',JSON.stringify(completed));assert.match(completed.result,/console.log/);assert.match(completed.snapshotPath,/INITIALIZATION/);
  const other=await fetch(base+'/api/bootstrap'),otherBoot=await other.json(),otherHeaders={'Content-Type':'application/json',Cookie:other.headers.get('set-cookie').split(';')[0],'X-CSRF-Token':otherBoot.csrf};
  assert.equal((await fetch(base+'/api/pc/status?thread=android-test',{headers:otherHeaders})).status,400);
  assert.equal((await fetch(base+'/api/pc',{method:'DELETE',headers,body:JSON.stringify({scope:'chat',thread:'android-test'})})).status,200);
