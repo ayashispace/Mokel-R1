@@ -120,3 +120,14 @@ test('Copilot redirects are canonicalized and its first conversation is adopted 
  assert.equal(sessions.nativeLocation('copilot','https://copilot.com/chat/conversation/28f020d8-116f-4169-8bdf-62f90754df3f').url,'https://copilot.com/chat/conversation/28f020d8-116f-4169-8bdf-62f90754df3f');
  assert.throws(()=>sessions.nativeLocation('copilot','https://copilot.com/chat/conversation/9b8e3926-6f35-4e89-9e42-68b10f44db9c'),/changed/);
 });
+
+test('DeepSeek adopts the first conversation from its new-chat page only once',t=>{
+ const {sessions}=fixture(t);
+ const start='https://chat.deepseek.com/a/chat';
+ const first=start+'/s/28f020d8-116f-4169-8bdf-62f90754df3f';
+ const {pairing}=sessions.pair({thread:'deepseek',site:'custom',url:start,presentation:'external'});
+ sessions.claim(pairing.code,start,origin);
+ assert.throws(()=>sessions.nativeLocation('deepseek',start+'/settings'),/changed/);
+ assert.equal(sessions.nativeLocation('deepseek',first).url,first);
+ assert.throws(()=>sessions.nativeLocation('deepseek',start+'/s/9b8e3926-6f35-4e89-9e42-68b10f44db9c'),/changed/);
+});

@@ -269,3 +269,11 @@ test('Groq network denial is distinct from invalid credentials and does not labe
  await assert.rejects(loadCatalog('groq','secret',async()=>Response.json({error:{message:'Access denied. Please check your network settings.'}},{status:403})),e=>e.status===403&&e.reason==='network_denied'&&/network/.test(e.message)&&!e.message.includes('secret'));
  await assert.rejects(loadCatalog('groq','secret',async()=>Response.json({error:{message:'Invalid API Key'}},{status:401})),e=>e.status===401&&!e.reason&&/key/.test(e.message));
 });
+
+test('DeepSeek uses capabilities from its API model catalog',()=>{
+ const model=classify('deepseek-flash','deepseek',{name:'DeepSeek Flash',input_modalities:['text','image'],output_modalities:['text']});
+ assert.equal(model.name,'DeepSeek Flash');
+ assert.equal(model.vision,true);
+ assert.equal(model.supported,true);
+ assert.equal(classify('deepseek-flash','deepseek',{input_modalities:['text'],output_modalities:['audio']}).supported,false);
+});
