@@ -1,7 +1,8 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Connect website · Mokel R1</title><link rel="stylesheet" href="bridge.css"><script src="connect.js" defer></script></head><body class="connect-page">
 <p class="eyebrow">MOKEL BROWSER BRIDGE</p><h1>Connect this website.</h1><p id="description">Mokel R1 will open this exact address in this browser and check its chat controls. Sign in on the website if asked.</p>
 <p id="target">Checking your request…</p><p id="server"></p>
-<label><input type="checkbox" id="save" style="width:auto"> Remember this browser for saved connections</label>
+<label><input type="checkbox" id="save" style="width:auto"> Remember this browser for saved connections <small>Reuse this browser when you reopen a saved website connection.</small></label>
+<label id="connection-messages-option" hidden><input type="checkbox" id="skip-connection-messages" style="width:auto"> Skip AI connection messages <small>Keep Mokel R1 and PC connection announcements out of the chat. Without setup instructions, a new AI chat may need guidance before it can request PC actions.</small></label>
 <p>Only connection details are saved. Website passwords and conversations stay on the website.</p>
 <button id="connect" disabled>Allow site access & connect</button><button id="return" class="secondary">Return to Mokel R1</button><p id="status" role="status">Loading…</p><p id="error" role="alert"></p>
 </body></html>

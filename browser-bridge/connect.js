@@ -17,6 +17,7 @@ async function load(){
  const key='setup-'+location.hash.slice(1);config=(await ext.storage.session.get(key))[key];
  if(!config)throw Error('This connection request has expired. Return to Mokel R1 and enter the URL again.');
  document.querySelector('#target').textContent=config.target.url;document.querySelector('#server').textContent='Requested by '+config.server;
+ document.querySelector('#connection-messages-option').hidden=!['external','embedded'].includes(config.target.presentation);
  if(['external','embedded'].includes(config.target.presentation))document.querySelector('#description').textContent='Link this website to Mokel R1 for PC proposals. You type directly on the website. Every PC action requires a separate Approve click in Mokel R1. No screen capture is used.';
  if(config.target.presentation==='live')document.querySelector('#description').textContent='Share this website’s rendered tab with your local Mokel R1 page and control it there with mouse and keyboard. Only this selected tab is attached. No chat controls need to be detected. Audio and browser permission dialogs stay in the source browser. You can stop sharing at any time.';
  const granted=await ext.permissions.contains({origins:[new URL(config.target.url).origin+'/*']});
@@ -28,7 +29,7 @@ button.addEventListener('click',async()=>{
   // Request only this origin, directly inside the user's click handler.
   if(!await ext.permissions.request({origins:[new URL(config.target.url).origin+'/*']}))throw Error('Site access was declined. Click Connect to allow this site, or return to Mokel R1.');
   status.textContent='Linking the website…';
-  const response=await ext.runtime.sendMessage({type:'MOKEL_CONNECT_APPROVED',save:document.querySelector('#save').checked});
+  const response=await ext.runtime.sendMessage({type:'MOKEL_CONNECT_APPROVED',save:document.querySelector('#save').checked,skipConnectionMessages:document.querySelector('#skip-connection-messages').checked});
   if(!response?.ok)throw Error(response?.error||'The bridge could not start.');
   status.textContent='The bridge is checking your website. Return to Mokel R1 for the connection result.';
   button.textContent='Connection started';return;

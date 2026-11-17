@@ -80,3 +80,16 @@ test('malformed commands are visible errors and generate a bounded correction re
  for(let i=0;i<4;i++){f.pc.invalidProposal('one',{...input,text:input.text+i});const job=f.pc.delivery('one');if(i<2){assert.ok(job);f.pc.delivered('one',{id:job.id});}else assert.equal(job,null);}
  assert.ok([...f.pending.values()].every(a=>a.status==='error'));
 });
+
+test('a silent website connection skips PC setup messages while still delivering completed results',()=>{
+ const {pc,sessions,pending}=fixture();
+ sessions.get('one').bridge.connection.skipConnectionMessages=true;
+ const lease=pc.enable('one','',true);
+ assert.equal(lease.setup,'ready');
+ assert.equal(pc.delivery('one'),null);
+ pc.propose('one',{mokelSession:lease.session,requestId:'report',actions:[{type:'read_file',path:'test.txt'}]});
+ Object.assign([...pending.values()][0],{status:'done',result:'confirmed result'});
+ const result=pc.delivery('one');
+ assert.equal(result.kind,'results');
+ assert.match(result.text,/confirmed result/);
+});

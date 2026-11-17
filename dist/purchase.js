@@ -1,4 +1,14 @@
-const platform=new URLSearchParams(location.search).get('platform');
+const params = new URLSearchParams(location.search);
+const platform = params.get('platform');
+if (params.get('from') === 'mokel') {
+ const back = document.querySelector('.back-link');
+ back.addEventListener('click', event => {
+  event.preventDefault();
+  window.close();
+  // A directly opened tab may not be allowed to close itself.
+  setTimeout(() => location.assign(back.href), 150);
+ });
+}
 const products={
  mobile:{name:'Mokel R1 Mobile',label:'Android APK',icon:'M',price:'₦5,000',title:'Mobile app coming soon',message:'The Android APK is still being prepared. Mobile checkout is paused until the app is ready.',button:'APK not available yet',fine:'You will be able to purchase the mobile app after its APK is ready.'},
  desktop:{name:'Mokel R1 Desktop',label:'Windows desktop app',icon:'D',price:'₦7,000',title:'Blaaiz sandbox setup pending',message:'Desktop checkout will use Blaaiz development mode. No real payment will be taken. Checkout is not active yet.',button:'Sandbox checkout setup pending',fine:'After a successful test checkout, you will receive a download link and code, with instructions to send the details to Mokel support on WhatsApp.'}

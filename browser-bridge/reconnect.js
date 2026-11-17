@@ -31,7 +31,7 @@ async function openSavedTab(config,job){
    await new Promise(resolve=>setTimeout(resolve,500));
   }
   if(matches.length===1){
-   const id=crypto.randomUUID();await ext.storage.session.set({[id]:{server:config.server,code:job.code,tabId:job.appTabId,appTabId:job.appTabId,frameId:matches[0].frameId,url:target.href,target:job.target,setupId:job.setupId}});
+   const id=crypto.randomUUID();await ext.storage.session.set({[id]:{server:config.server,code:job.code,tabId:job.appTabId,appTabId:job.appTabId,frameId:matches[0].frameId,url:target.href,target:job.target,setupId:job.setupId,skipConnectionMessages:job.skipConnectionMessages===true}});
    await ext.windows.create({url:ext.runtime.getURL('bridge.html')+'#'+id,type:'popup',width:460,height:470,focused:false});return;
   }
   // No readable loaded frame: use the original website tab without another setup click.
@@ -62,7 +62,7 @@ async function openSavedTab(config,job){
   throw Error('The website opened a different address. Open the saved conversation in its browser tab, then try again. If it moved, update the saved connection.');
  }
  const id=crypto.randomUUID();
- await ext.storage.session.set({[id]:{server:config.server,deviceKey:config.deviceKey,code:job.code,tabId:tab.id,appTabId:job.appTabId,url:tab.url,target:job.target,opened,externalFallback:job.externalFallback===true,reconnectId:job.id,...(job.setupId?{setupId:job.setupId}:{})}});
+ await ext.storage.session.set({[id]:{server:config.server,deviceKey:config.deviceKey,code:job.code,tabId:tab.id,appTabId:job.appTabId,url:tab.url,target:job.target,opened,externalFallback:job.externalFallback===true,reconnectId:job.id,skipConnectionMessages:job.skipConnectionMessages===true,...(job.setupId?{setupId:job.setupId}:{})}});
  await ext.windows.create({url:ext.runtime.getURL('bridge.html')+'#'+id,type:'popup',width:460,height:470,...(job.target.presentation==='live'?{focused:false}:{})});
 }
 function appOrigin(sender){
@@ -120,7 +120,7 @@ ext.runtime.onMessage.addListener((message,sender,reply)=>{
     deviceKey=mokelBrowsers[config.server]?.deviceKey||Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,'0')).join('');
     mokelBrowsers[config.server]={server:config.server,deviceKey};await ext.storage.local.set({mokelBrowsers});
    }
-   await openSavedTab({server:config.server,deviceKey},{code:config.code,target:config.target,setupId:id,appTabId:config.appTabId});
+   await openSavedTab({server:config.server,deviceKey},{code:config.code,target:config.target,setupId:id,appTabId:config.appTabId,skipConnectionMessages:message.skipConnectionMessages===true});
    return {ok:true};
   })().then(reply,error=>reply({ok:false,error:error.message}));return true;
  }

@@ -234,6 +234,7 @@ async function apiScoped(req,res,url){
   const preferences=combinedPrompt(data.savedGlobalPrompt??settings.preferences.systemPrompt,data.systemPrompt);
   if(nativePC.actions(thread).some(a=>a.nativeSession===nativePC.current(thread)?.session&&['pending','running'].includes(a.status)))throw Error('Finish the pending PC requests before refreshing the connection.');
   if(chatSettings.get(thread).pc){await checkedWorkspace(chatSettings.get(thread).pc);json(res,nativePC.enable(thread,preferences,data.refresh===true));return;}
+  if(bridge.connection.skipConnectionMessages){json(res,{ok:true,skipped:true});return;}
   if(data.refresh!==true&&nativeIntro.current(thread)){json(res,{ok:true});return;}
   json(res,nativeIntro.queue(thread,'Mokel R1 is connected to this website conversation. Apply these settings silently; do not acknowledge configuration. You are communicating through Mokel R1. PC, workspace and terminal access are currently disabled. Do not propose PC actions or claim to have executed them. Ask the user to choose Connect my PC in Mokel R1 when execution is needed. Other website features continue normally. A later Mokel PC setup replaces this access status.\n\n'+preferences,{kind:'introduction'}));return;
  }
@@ -475,8 +476,8 @@ async function apiScoped(req,res,url){
  if(url.pathname==='/api/pc/action'&&req.method==='POST'){
   const data=await body(req,1000);const action=pending.get(data.id);
   if(!action||action.status!=='pending'||Date.now()-action.created>3600000)throw new Error('This action is no longer awaiting approval. Ask for it again.');
+  if(!['approve','reject'].includes(data.decision))throw new Error('Approve or reject this action.');
   if(data.decision==='reject'){action.status='rejected';projectLedger.record(action);json(res,publicAction(action));return}
-  if(data.decision!=='approve')throw new Error('Approve or reject this action.');
   await executePCAction(action);
   json(res,publicAction(action));return;
  }
@@ -522,7 +523,9 @@ const server=http.createServer(async(req,res)=>{
    if(route==='/api/agent/bridge/claim'){
     if(agentBridge.prepare(input.code).target.presentation==='live'&&input.liveVersion!==1)throw Error('Live website requires Browser Bridge 0.7.0. Update and reload the bridge, then reconnect.');
     if(input.deviceKey!==undefined&&!/^[a-f0-9]{64}$/.test(input.deviceKey))throw new Error('Invalid browser key.');
+    if(input.skipConnectionMessages!==undefined&&typeof input.skipConnectionMessages!=='boolean')throw Error('Invalid connection message preference.');
     const paired=agentBridge.claim(input.code,input.url,origin,input.selectors,input.externalFallback===true);
+    agentBridge.get(paired.thread).bridge.connection.skipConnectionMessages=input.skipConnectionMessages===true;
     if(agentBridge.get(paired.thread)?.bridge.connection?.token)bridgeTokenOwners.set(agentBridge.get(paired.thread).bridge.connection.token,owner.id);
     if(input.deviceKey)agentBridge.get(paired.thread).bridge.connection.deviceId=savedAgents.register(input.deviceKey,origin);
     bridgeJson({...paired,nativeWait:true});return;

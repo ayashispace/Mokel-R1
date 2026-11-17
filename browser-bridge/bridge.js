@@ -108,7 +108,7 @@ async function main(){
   if(version[0]?.result?.version!=='0.8.18')throw Error('Refresh the connected website once after updating Browser Bridge 0.1.0, then reconnect. Its existing draft has been preserved.');
  }
  // The pairing code authorizes only the exact URL requested by the local user.
- const paired=await call('claim',{code:config.code,url:config.url,deviceKey:config.deviceKey,externalFallback:config.externalFallback===true,...(live?{liveVersion:1}:{}),...(detected?{selectors:detected.selectors}:{})});token=paired.token;connectionTarget=paired.target;delete config.code;
+ const paired=await call('claim',{code:config.code,url:config.url,deviceKey:config.deviceKey,externalFallback:config.externalFallback===true,skipConnectionMessages:config.skipConnectionMessages===true,...(live?{liveVersion:1}:{}),...(detected?{selectors:detected.selectors}:{})});token=paired.token;connectionTarget=paired.target;delete config.code;
 
  if(native){
   const target={tabId:config.tabId,frameIds:[config.frameId||0]};
@@ -119,7 +119,7 @@ async function main(){
    if(!nativeReceipt)return;
    const receipt=nativeReceipt,acknowledgement=await call('native-delivered',receipt);
    nativeReceipt=null;document.querySelector('#error').textContent='';
-   if(acknowledgement.returnToWebsite)await focusTab(config.tabId,acknowledgement.focusWindow!==false);
+   if(acknowledgement.returnToWebsite)await focusTab(config.tabId,acknowledgement.focusWindow!==false).catch(()=>{});
   }
   // Wake upload/send waits even when a hidden source tab throttles its own timers.
   nativePulse=setInterval(nativePulseWake=async()=>{if(!active||!nativeInFlight||pulseBusy)return;pulseBusy=true;
@@ -140,13 +140,14 @@ async function main(){
     if(result.delivery||result.pc?.delivery){
      const delivery=result.delivery||result.pc.delivery;
      nativeInFlight=delivery;
+     if(delivery.kind==='results')await focusTab(config.tabId,false).catch(()=>{});
      try{
       const detected=await ext.tabs.sendMessage(config.tabId,{type:'MOKEL_DETECT'},{frameId:config.frameId||0});
       if(detected?.error||!detected?.selectors){nativeReceipt={id:delivery.id,deferred:true};}
       else{
        const target={site:'custom',selectors:detected.selectors};
        const ready=await ext.tabs.sendMessage(config.tabId,{type:'MOKEL_NATIVE_READY',target,job:{id:delivery.sendId||delivery.id,text:delivery.text,kind:delivery.kind,legacyText:delivery.legacyText}},{frameId:config.frameId||0});
-       if(!ready?.ready)nativeReceipt={id:delivery.id,deferred:true};
+       if(!ready?.ready)nativeReceipt={id:delivery.id,deferred:true,error:ready?.error};
        else{
         const sent=await ext.tabs.sendMessage(config.tabId,{type:'MOKEL_SEND',job:{id:delivery.sendId||delivery.id,text:delivery.text,kind:delivery.kind,legacyText:delivery.legacyText,attachment:delivery.attachment,url:connectionTarget.url,...target,submitOnly:true}},{frameId:config.frameId||0});
         nativeReceipt=sent?.attachmentUnsupported?{id:delivery.id,attachmentUnsupported:true}:sent?.submitted?{id:delivery.id}:{id:delivery.id,error:sent?.error||'Submission could not be verified. Check the website; Mokel has not resent it.',retryable:sent?.retryable===true&&sent?.submissionAttempted===false,submissionAttempted:sent?.submissionAttempted!==false};

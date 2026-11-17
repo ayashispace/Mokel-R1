@@ -199,6 +199,15 @@
    }finally{injecting=false;}
    const commitUntil=Date.now()+2000;
    while(!userEdited&&!sameDraft(reacquire(),job.text)&&!value(composer).trim()&&Date.now()<commitUntil)await replyTick(50);
+   if(location.hostname==='claude.ai'&&!userEdited&&!value(reacquire()).trim()&&typeof DataTransfer==='function'&&typeof ClipboardEvent==='function'){
+    const clipboardData=new DataTransfer();
+    clipboardData.setData('text/plain',job.text);
+    injecting=true;
+    try{composer.dispatchEvent(new ClipboardEvent('paste',{bubbles:true,cancelable:true,clipboardData}));}
+    finally{injecting=false;}
+    await replyTick(100);
+   }
+   if(!userEdited&&!value(reacquire()).trim())throw temporary('The website did not accept text in its message box. Waiting to try again.');
    // Give the framework time to replace Voice with Send, including hidden tabs.
    let sendButton;
    const readyUntil=Date.now()+15000;
@@ -297,7 +306,10 @@
     const result=globalThis.__mokelDetect(site?presets[site]:hint);adapter({site:'custom',selectors:result.selectors});respond({...result,url:location.href});
    }catch(e){respond({error:e.message,retryable:!!e.retryable});}return;
   }
-  if(message.type==='MOKEL_NATIVE_READY'){try{const {selectors,composer}=adapter(message.target);const job=message.job,known=job&&nativeDeliveries.get(job.id);respond({ready:!busy&&!find(selectors.busy)&&(!editorText(composer).trim()||known?.submitted||typeof job?.text==='string'&&(sameDraft(composer,job.text)||setupDraftMatches(composer,job)))});}catch(e){respond({error:e.message});}return;}
+  if(message.type==='MOKEL_NATIVE_READY'){try{const {selectors,composer}=adapter(message.target);const job=message.job,known=job&&nativeDeliveries.get(job.id);const generating=busy||!!find(selectors.busy);
+ const draft=editorText(composer).trim();
+ const ready=!generating&&(!draft||known?.submitted||typeof job?.text==='string'&&(sameDraft(composer,job.text)||setupDraftMatches(composer,job)));
+ respond({ready,...(!ready?{error:generating?'Waiting for the AI to finish its reply.':'The website has an unsent draft. Send or clear it to let Mokel deliver results.'}:{})});}catch(e){respond({error:e.message});}return;}
   if(message.type==='MOKEL_CHECK'){try{adapter(message.target);respond({ok:true})}catch(e){respond({error:e.message,retryable:!!e.retryable})}return;}
   if(message.type==='MOKEL_SEND'){send(message.job).then(respond,error=>{promptContext=null;respond({error:error.message,retryable:!!error.retryable,submissionAttempted:!!error.submissionAttempted});});return true;}
  });
