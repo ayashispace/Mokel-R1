@@ -85,7 +85,7 @@ const isConnected=id=>Object.hasOwn(settings.keys,id);
 const lookupProvider=id=>provider(id,settings.customProviders);
 const catalogFor=async(id,key,base=settings.providerBases[id])=>{
  const catalog=await loadCatalog(id,key,fetch,settings.customProviders,{base});
- for(const model of settings.preferences.manualModels?.[id]||[])
+ for(const model of (settings.keys[id]===key&&(!base||base===settings.providerBases[id])?settings.preferences.manualModels?.[id]:[])||[])
   if(!catalog.models.some(entry=>entry.id===model.id))catalog.models.push(model);
  return catalog;
 };
@@ -365,9 +365,9 @@ async function apiScoped(req,res,url){
   const existing=catalog.models.find(model=>model.id===modelId);
   if(existing?.supported&&!existing.blockedReason){json(res,{model:existing,...catalog});return;}
   const model={id:modelId,name:modelId,provider:id,kind:'Chat',supported:true,vision:false,status:'ready',manual:true};
-  await generate(id,settings.keys[id],modelId,[{role:'user',text:'Reply OK.'}],false,fetch,settings.customProviders,'',{maxTokens:256});
+  await generate(id,settings.keys[id],modelId,[{role:'user',text:'Reply OK.'}],false,fetch,settings.customProviders,'',{maxTokens:256,base:settings.providerBases[id]});
   const stored=settings.preferences.manualModels?.[id]||[];
-  settings.preferences.manualModels={...settings.preferences.manualModels,[id]:[...stored.filter(entry=>entry.id!==modelId),model].slice(-50)};
+  settings.preferences.manualModels={...settings.preferences.manualModels,[id]:[...stored.filter(entry=>entry.id!==modelId),model]};
   const current=models.get(id)||catalog;
   current.models=[...current.models.filter(entry=>entry.id!==modelId),model];
   models.set(id,current);save();
@@ -376,7 +376,7 @@ async function apiScoped(req,res,url){
  if(url.pathname==='/api/providers'&&req.method==='POST'){
   const data=await body(req,10000);const id=requireString(data.id,80);const p=lookupProvider(id);const key=p.local?'':p.custom&&data.key===''?'':requireString(data.key,1000);
   const base=p.local?normalizeOllamaBase(data.base??settings.providerBases[id]??p.base):undefined;
-  const catalog=await catalogFor(id,key,base);settings.keys[id]=key;if(p.local)settings.providerBases[id]=base;save();models.set(id,catalog);json(res,{connected:true,provider:publicProvider(p),...catalog});return;
+  const catalog=await catalogFor(id,key,base);if(settings.keys[id]!==key||(p.local&&settings.providerBases[id]!==base))delete settings.preferences.manualModels?.[id];settings.keys[id]=key;if(p.local)settings.providerBases[id]=base;save();models.set(id,catalog);json(res,{connected:true,provider:publicProvider(p),...catalog});return;
  }
  if(url.pathname==='/api/providers/custom'&&req.method==='POST'){
   const data=await body(req,10000);if(settings.customProviders.length>=20)throw new Error('You can save up to 20 custom providers.');
