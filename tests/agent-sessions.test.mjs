@@ -141,3 +141,16 @@ test('Perplexity session URLs adopt their first search thread once',t=>{
  assert.equal(sessions.nativeLocation('perplexity','https://www.perplexity.ai/search/first-thread').url,'https://www.perplexity.ai/search/first-thread');
  assert.throws(()=>sessions.nativeLocation('perplexity','https://www.perplexity.ai/search/another-thread'),/changed/);
 });
+
+test('ChatGPT adopts a saved URL from its provisional first-turn URL only once',t=>{
+ const {sessions}=fixture(t);
+ const root='https://chatgpt.com/';
+ const {pairing}=sessions.pair({thread:'chatgpt',site:'custom',url:root,presentation:'external'});
+ sessions.claim(pairing.code,root,origin);
+ const temporary=root+'c/local-chatgpt%3A45fd98a6-a02f-410a-8356-10b005d44113';
+ const saved=root+'c/6afde836-f448-83ea-b2eb-8540a6fbf7d9';
+ assert.equal(sessions.nativeLocation('chatgpt',temporary).url,temporary);
+ assert.throws(()=>sessions.nativeLocation('chatgpt','https://elsewhere.example/'),/changed/);
+ assert.equal(sessions.nativeLocation('chatgpt',saved).url,saved);
+ assert.throws(()=>sessions.nativeLocation('chatgpt',root+'c/39998c98-7a89-40fa-9410-c1fa82c58484'),/changed/);
+});
