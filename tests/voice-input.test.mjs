@@ -40,3 +40,15 @@ test('live dictation stops when users edit their draft and ignores late results'
  r.onresult({results:[result('Late',true)]});
  assert.equal(f.draft().text,'My edited prompt');
 });
+
+test('settings opens the original review controls even when composer dictation is live',()=>{
+ const f=fixture({live:true,language:'fr-FR'});
+ f.voice.openSettings();
+ assert.equal(f.engine(),undefined);
+ assert.equal(f.elements['#dictation-language'].value,'fr-FR');
+ f.voice.record();f.engine().onresult({results:[result('Bonjour',true)]});
+ assert.equal(f.elements['#dictation-review'].value,'Bonjour');
+ assert.equal(f.draft().text,'Existing text');
+ f.voice.cancel();f.voice.open();f.engine().onresult({results:[result('Bonjour',true)]});
+ assert.equal(f.draft().text,'Existing text Bonjour');
+});

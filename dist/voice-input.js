@@ -23,12 +23,12 @@ export function createVoiceInput({openModal,closeModal,getDraft,setDraft,notice,
   button?.setAttribute('aria-label',recording?'Stop voice typing':'Start voice typing');
  }
  function cancel(){session++;const old=recognition;recognition=null;old?.abort();showLive(false);}
- function open(){
-  if(!Speech){notice('Voice typing is unavailable in this browser. Try Chrome or Edge.');return;}
-  if(recognition){stop();return;}
+ function open(review=false){
+  if(!Speech&&!review){notice('Voice typing is unavailable in this browser. Try Chrome or Edge.');return;}
+  if(recognition&&!review){stop();return;}
   cancel();base=getDraft();finalText='';interim='';prefix='';
   const settings=getSettings();
-  live=settings.live!==false;
+  live=!review&&settings.live!==false;
   language=settings.language||language;
   expectedDraft=base.text;
   if(live){record();return;}
@@ -38,6 +38,7 @@ export function createVoiceInput({openModal,closeModal,getDraft,setDraft,notice,
   select.value=language;
  }
  function record(){
+  if(!Speech){notice('Voice typing is unavailable in this browser. Try Chrome or Edge.');return;}
   if(recognition||(!live&&!$('#dictation-review')))return;
   prefix=live?'':$('#dictation-review').value.trim();finalText='';interim='';if(!live)language=$('#dictation-language').value;
   const current=++session,r=new Speech();recognition=r;r.lang=language;r.continuous=getSettings().continuous!==false;r.interimResults=true;r.maxAlternatives=3;
@@ -71,5 +72,5 @@ export function createVoiceInput({openModal,closeModal,getDraft,setDraft,notice,
   if(combined.length>60000){status('The combined message is too long. Shorten the transcript first.');return;}
   setDraft(combined);cancel();closeModal();
  }
- return {open,record,stop,insert,cancel};
+ return {open,openSettings:()=>open(true),record,stop,insert,cancel};
 }

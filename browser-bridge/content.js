@@ -28,7 +28,7 @@
   deepseek:{composer:'textarea[placeholder="Message DeepSeek"], textarea.ds-scroll-area',send:'button[aria-label="Send message"], button[aria-label="Send"], [role="button"][aria-label="Send message"], [role="button"].ds-button--primary:has(svg path[d^="M8.3125 0.980206"])',reply:'.ds-assistant-message-main-content',busy:'button[aria-label="Stop"], [role="button"][aria-label="Stop generating"]'},
   // Observed on grok.com: the empty composer shows Voice; Submit appears only
   // after input. Select answer Markdown, excluding the speaker/Thinking panels.
-  grok:{composer:'[data-testid="chat-input"] [contenteditable="true"][aria-label="Ask Grok anything"]',send:'button[data-testid="chat-submit"][aria-label="Submit"]',reply:'[data-testid="assistant-message"] .response-content-markdown',busy:'button[aria-label="Stop model response"]'}
+  grok:{composer:'[data-testid="chat-input"] [contenteditable="true"][aria-label="Ask Grok anything"], textarea[aria-label="Ask Grok anything"]',send:'button[data-testid="chat-submit"][aria-label="Submit"], button[data-testid="chat-submit"][aria-label="Send"]',reply:'[data-testid="assistant-message"] .response-content-markdown',busy:'button[aria-label="Stop model response"]'}
  };
  const visible=element=>!!element&&element.getClientRects().length>0&&getComputedStyle(element).visibility!=='hidden';
  const find=selector=>[...document.querySelectorAll(selector)].find(visible);

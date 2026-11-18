@@ -12,8 +12,8 @@ const url='https://chatgpt.com/c/adapter-test';
 // layout replaces Voice with Send only after an editable textbox receives input.
 function fixture({layout='current',pageURL='',draft='',noComposer=false,noSend=false,disabledSend=false,nested=false,codeBlock=false,complete=false,streamUntil=0,login=false,overload=false,overloadBefore=false,imageOnly=false,galleryOnly=false,backgroundTimers=false,sendDelay=400,delayedCommit=false,richParagraphs=false,linkFormatting=false,clearOnSend=false,userEdits=false,text='Hello'}={}){
  const custom=layout==='gemini'?{composer:'rich-textarea .ql-editor[contenteditable="true"][role="textbox"]',send:'button[aria-label="Send message"]',reply:'message-content[id^="message-content-id-r_"] .markdown',busy:'button[aria-label="Stop response"]'}:layout==='perplexity'?{composer:'.composer-editable[contenteditable="true"][data-lexical-editor="true"]',send:'button[aria-label="Submit"]',reply:'[data-workflow-items] [data-renderer="lm"]',busy:'button[aria-label="Stop generating"]'}:layout==='copilot'?{composer:'#m365-chat-editor-target-element[contenteditable="true"]',send:'button[aria-label="Send"]',reply:'[data-testid="markdown-reply"]',busy:'button[aria-label="Stop generating"]'}:layout==='claude'?{composer:'[data-testid="chat-input"][contenteditable="true"]',send:'button[data-testid="chat-input-send"][aria-label="Send message"]',reply:'[data-transcript-engine-root] [data-cds="Prose"]',busy:'button[aria-label="Stop response"]'}:layout==='meta'?{composer:'[data-testid="composer-input"][contenteditable="true"]',send:'button[data-testid="composer-send-button"][aria-label="Send"]',reply:'[data-testid="assistant-message"]',busy:'button[aria-label="Stop"]'}:layout==='mistral'?{composer:'div.ProseMirror[contenteditable="true"]',send:'button[aria-label="Send"]',reply:'[data-message-author-role="assistant"] [data-testid="text-message-part"]',busy:'button[aria-label="Stop"]'}:layout==='oxalpha'?{composer:'textarea[placeholder="Send a message..."]',send:'button[title="Send"]',reply:'.msg-assistant .prose',busy:'button[title="Stop"]'}:null;
- const site=custom?'custom':layout==='deepseek'?'deepseek':layout==='grok'?'grok':'chatgpt';
- const currentUrl=pageURL||(layout==='mistral'?'https://chat.mistral.ai/work/fixture':custom?'https://oxalpha.com/chat':layout==='grok'?'https://grok.com/c/adapter-test?rid=fixture':url);
+ const site=custom?'custom':layout==='deepseek'?'deepseek':layout.startsWith('grok')?'grok':'chatgpt';
+ const currentUrl=pageURL||(layout==='mistral'?'https://chat.mistral.ai/work/fixture':custom?'https://oxalpha.com/chat':layout.startsWith('grok')?'https://grok.com/c/adapter-test?rid=fixture':url);
  let pendingText=null;let listener,clock=0,enteredAt=draft?0:null,sent=false,clicks=0,edits=0,userChanged=false,model='Model A';const staged=[],progress=[];
  class Element{
   constructor(attrs={},text=''){this.attrs=attrs;this.innerText=text;this.textContent=text;this.disabled=false;this.isContentEditable=true;}
@@ -28,7 +28,7 @@ function fixture({layout='current',pageURL='',draft='',noComposer=false,noSend=f
  }
  class Textarea extends Element{get value(){return this.innerText;}set value(v){this.innerText=v;this.textContent=v;enteredAt=clock;edits++;staged.push(v);}}
  class Input extends Element{}
- const composer=layout!=='gemini'&&(layout==='deepseek'||custom)?new Textarea({},draft):new Element({},draft);
+ const composer=layout!=='gemini'&&(layout==='deepseek'||layout==='grok-textarea'||custom)?new Textarea({},draft):new Element({},draft);
  const oldReply=new Element({},'Old answer must not be returned');
  const newReply=new Element({},imageOnly?'':'A fresh answer');
  newReply.closest=()=>complete?{getAttribute:()=> 'complete'}:null;
@@ -42,9 +42,9 @@ function fixture({layout='current',pageURL='',draft='',noComposer=false,noSend=f
  if(nested)newReply.child=innerReply;
  const button=new Element();button.disabled=disabledSend;
  button.click=()=>{sent=true;clicks++;if(clearOnSend){composer.innerText='';composer.textContent='';if(linkFormatting)composer.childNodes=[];}};
- const composerSelector=custom?custom.composer:layout==='grok'?'[data-testid="chat-input"] [contenteditable="true"][aria-label="Ask Grok anything"]':layout==='deepseek'?'textarea[placeholder="Message DeepSeek"]':layout==='legacy'?'#prompt-textarea':'[contenteditable="true"][role="textbox"][aria-label="Ask ChatGPT"]';
- const sendSelector=custom?custom.send:layout==='grok'?'button[data-testid="chat-submit"][aria-label="Submit"]':layout==='deepseek'?'[role="button"].ds-button--primary:has(svg path[d^="M8.3125 0.980206"])':layout==='legacy'?'button[data-testid="send-button"]':'button[type="submit"][aria-label="Send"]';
- const replySelector=custom?custom.reply:layout==='grok'?'[data-testid="assistant-message"] .response-content-markdown':layout==='deepseek'?'.ds-assistant-message-main-content':layout==='legacy'?'[data-message-author-role="assistant"]':'[data-markdown-text-style="assistant-message"]';
+ const composerSelector=custom?custom.composer:layout==='grok-textarea'?'textarea[aria-label="Ask Grok anything"]':layout.startsWith('grok')?'[data-testid="chat-input"] [contenteditable="true"][aria-label="Ask Grok anything"]':layout==='deepseek'?'textarea[placeholder="Message DeepSeek"]':layout==='legacy'?'#prompt-textarea':'[contenteditable="true"][role="textbox"][aria-label="Ask ChatGPT"]';
+ const sendSelector=custom?custom.send:layout==='grok-textarea'?'button[data-testid="chat-submit"][aria-label="Send"]':layout.startsWith('grok')?'button[data-testid="chat-submit"][aria-label="Submit"]':layout==='deepseek'?'[role="button"].ds-button--primary:has(svg path[d^="M8.3125 0.980206"])':layout==='legacy'?'button[data-testid="send-button"]':'button[type="submit"][aria-label="Send"]';
+ const replySelector=custom?custom.reply:layout.startsWith('grok')?'[data-testid="assistant-message"] .response-content-markdown':layout==='deepseek'?'.ds-assistant-message-main-content':layout==='legacy'?'[data-message-author-role="assistant"]':'[data-markdown-text-style="assistant-message"]';
  function nodes(selector){
   return [...new Set(selector.split(',').flatMap(part=>{
    const s=part.trim();
@@ -55,7 +55,7 @@ function fixture({layout='current',pageURL='',draft='',noComposer=false,noSend=f
    if(s===sendSelector)return !noSend&&enteredAt!==null&&clock-enteredAt>=sendDelay?[button]:[];
    if(s===replySelector)return sent&&!galleryOnly?[oldReply,newReply,...(nested?[innerReply]:[])]:[oldReply];
    if(s==='[data-testid="generated-image-gallery"]')return sent&&galleryOnly?[newReply]:[];
-   if(s===(custom?custom.busy:layout==='grok'?'button[aria-label="Stop model response"]':'button[data-testid="stop-button"]'))return sent&&clock<streamUntil?[button]:[];
+   if(s===(custom?custom.busy:layout.startsWith('grok')?'button[aria-label="Stop model response"]':'button[data-testid="stop-button"]'))return sent&&clock<streamUntil?[button]:[];
    return [];
   }))];
  }
@@ -310,4 +310,11 @@ test('Gemini recognizes an empty rich editor without Send or prior replies, then
 
 for(const [layout,pageURL] of [['perplexity','https://www.perplexity.ai/session/test'],['copilot','https://copilot.com/chat/conversation/test']])test(layout+' connects with an empty editor and sends once after Send appears',async()=>{
  const page=fixture({layout,pageURL,clearOnSend:true,delayedCommit:true,sendDelay:800,complete:true});const detected=await page.detect();assert.equal(detected.error,undefined);assert.ok(detected.selectors);assert.equal(page.stats().clicks,0);const result=await page.send();assert.equal(result.text,'A fresh answer');assert.equal(page.stats().clicks,1);
+});
+
+test('Grok current textarea composer and Send label connect and submit once',async()=>{
+ const page=fixture({layout:'grok-textarea'});
+ assert.equal((await page.check()).ok,true);
+ assert.equal((await page.send()).text,'A fresh answer');
+ assert.equal(page.stats().clicks,1);
 });

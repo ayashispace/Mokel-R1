@@ -626,11 +626,13 @@ async function attachFiles(fileList){
  $('#file-input').value='';notify(added?'Attachments ready':'No files were attached');
  if(currentMode()==='api'&&state.files.some(f=>f.image)&&!isVisionChoice(owner.model||state.selected))modelsDialog(true);
 }
-const voice=createVoiceInput({getSettings:()=>({live:true,...state.preferences.recording}),openModal,closeModal,notice,getDraft:()=>({id:state.active,text:$('#message-input').value}),setDraft:text=>{$('#message-input').value=text;resizeInput();$('#message-input').focus();}});
+const voice=createVoiceInput({getSettings:()=>({...state.preferences.recording,live:true}),openModal,closeModal,notice,getDraft:()=>({id:state.active,text:$('#message-input').value}),setDraft:text=>{$('#message-input').value=text;resizeInput();$('#message-input').focus();}});
 function startVoice(){voice.open();}
-function recordingSettingsDialog(){
- const settings={language:navigator.language||'en-GB',live:true,continuous:true,...state.preferences.recording};
- openModal('recording-settings','<h2>Recording settings.</h2><form id="recording-settings-form"><label class="field-label" for="recording-language">Speaking language</label><input class="text-field" id="recording-language" value="'+esc(settings.language)+'" required maxlength="35" placeholder="en-NG"><p class="small-note">Use a language code such as en-NG, en-US, ar-SA or fr-FR.</p><label class="checkbox-row"><input type="checkbox" id="recording-live" '+(settings.live?'checked':'')+'> Type into the prompt bar as I speak</label><p class="small-note">When disabled, review the transcript before adding it to your message.</p><label class="checkbox-row"><input type="checkbox" id="recording-continuous" '+(settings.continuous?'checked':'')+'> Keep listening between sentences</label><p class="small-note">Click the microphone again or Stop recording to finish. Speech recognition may use your browser’s online speech service. Your message is sent when you press Send.</p><div class="form-error" id="recording-settings-error" role="alert"></div><button class="button primary full" type="submit">Save settings</button></form>');
+let recordingSave=Promise.resolve();
+function saveRecordingLanguage(language){
+ const recording={continuous:true,...state.preferences.recording,language,live:true};
+ state.preferences.recording=recording;
+ recordingSave=recordingSave.then(()=>api('/api/settings','POST',{recording})).catch(error=>notice('Could not save recording language. '+error.message));
 }
 function sendGenerator(){
  const c=ensureChat();if(c.pending||c.attaching)return;
@@ -755,7 +757,7 @@ document.addEventListener('click',async e=>{const b=e.target.closest('[data-acti
  else if(a==='notice-close')$('#notice').hidden=true;
  else if(a==='about')about();
  else if(a==='settings')settingsDialog();
- else if(a==='recording-settings')recordingSettingsDialog();
+ else if(a==='recording-settings')voice.openSettings();
  else if(a==='manual-model')manualModelDialog();
  else if(a==='get-app')appStoreDialog();
  else if(a==='get-mobile-app'||a==='get-desktop-app')window.open('/purchase.html?from=mokel&platform='+(a==='get-mobile-app'?'mobile':'desktop'),'_blank','noopener');
@@ -851,19 +853,9 @@ document.addEventListener('click',async e=>{const b=e.target.closest('[data-acti
  else if(a==='continue-agent-actions')await continueAgentActions(id);
 }catch(error){notice(error.message)}});
 document.addEventListener('change',async event=>{if(event.target.id!=='composer-approval-mode')return;const select=event.target,c=chat();if(!c?.pc?.connected)return;const old=c.pc.approvalMode||'ask';select.disabled=true;try{const result=await api('/api/pc/approval','POST',{thread:c.id,mode:select.value});c.pc=result;if(state.active===c.id){renderHeader();await nativePCPanel.refresh(true);}notify('Approval mode updated for new requests.');}catch(error){select.value=old;notice(error.message);}finally{select.disabled=false;}});
-document.addEventListener('change',event=>{if(event.target.id==='chat-file-input')readChatFile(event.target.files?.[0]);if(event.target.id==='pc-approval-mode')void savePCApproval(event.target);});
+document.addEventListener('change',event=>{if(event.target.id==='dictation-language')saveRecordingLanguage(event.target.value);if(event.target.id==='chat-file-input')readChatFile(event.target.files?.[0]);if(event.target.id==='pc-approval-mode')void savePCApproval(event.target);});
 document.addEventListener('submit',async e=>{e.preventDefault();const form=e.target;
  if(form.id==='manual-commands-form'){await submitManualCommands(form);return;}
- if(form.id==='recording-settings-form'){
-  const button=form.querySelector('[type=submit]');
-  button.disabled=true;
-  try{
-   state.preferences=(await api('/api/settings','POST',{recording:{language:$('#recording-language').value.trim(),live:$('#recording-live').checked,continuous:$('#recording-continuous').checked}})).preferences;
-   if(form.isConnected)settingsDialog();
-  }catch(error){if(form.isConnected)formFeedback($('#recording-settings-error'),error.message,true);}
-  finally{button.disabled=false;}
-  return;
- }
  if(form.id==='manual-model-form'){
   const button=form.querySelector('[type=submit]');
   button.disabled=true;
