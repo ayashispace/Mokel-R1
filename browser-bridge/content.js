@@ -33,6 +33,13 @@
  const visible=element=>!!element&&element.getClientRects().length>0&&getComputedStyle(element).visibility!=='hidden';
  const find=selector=>[...document.querySelectorAll(selector)].find(visible);
  function assertSignedIn(){
+  const title=document.title||'';
+  const body=document.body?.innerText||'';
+  const challenge=/max challenge attempts exceeded/i.test(body.slice(0,3000))||
+   /just a moment|security verification|checking your browser/i.test(title);
+  if(challenge&&!find('textarea, [contenteditable="true"]'))
+   throw Error('The website requires human verification. Open its original tab, refresh that page once, complete the check there, then reconnect in Mokel R1.');
+
   const authDialog=[...document.querySelectorAll('[role="dialog"], dialog[open]')].find(el=>visible(el)&&/\b(?:log in|sign in|sign up|authorize|authorization)\b/i.test(el.innerText||''));
   if(authDialog||find('input[type="password"]'))throw Error('Sign in or complete authorization in the website tab, then try this connection again.');
  }

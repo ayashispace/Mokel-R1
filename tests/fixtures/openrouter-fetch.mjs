@@ -29,6 +29,7 @@ globalThis.fetch = async (url, options) => {
     if(options?.headers?.Authorization!=='Bearer custom-secret')return Response.json({}, {status:401});
     if(url.endsWith('/models'))return Response.json({data:[{id:'custom-chat'}]});
     if(url.endsWith('/chat/completions')){
+      if(JSON.parse(options.body).model==='missing-model')return Response.json({error:{message:'Model not found'}},{status:404});
       const system=JSON.parse(options.body).messages[0].content;
       return Response.json({choices:[{message:{content:system.includes('Shared fixture instructions')?'Custom fixture response':'Missing shared prompt'}}]});
     }

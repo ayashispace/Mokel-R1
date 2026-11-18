@@ -131,3 +131,13 @@ test('DeepSeek adopts the first conversation from its new-chat page only once',t
  assert.equal(sessions.nativeLocation('deepseek',first).url,first);
  assert.throws(()=>sessions.nativeLocation('deepseek',start+'/s/9b8e3926-6f35-4e89-9e42-68b10f44db9c'),/changed/);
 });
+
+test('Perplexity session URLs adopt their first search thread once',t=>{
+ const {sessions}=fixture(t);
+ const start='https://www.perplexity.ai/session/new-session';
+ const {pairing}=sessions.pair({thread:'perplexity',site:'custom',url:start,presentation:'external'});
+ sessions.claim(pairing.code,start,origin);
+ assert.throws(()=>sessions.nativeLocation('perplexity','https://www.perplexity.ai/settings'),/changed/);
+ assert.equal(sessions.nativeLocation('perplexity','https://www.perplexity.ai/search/first-thread').url,'https://www.perplexity.ai/search/first-thread');
+ assert.throws(()=>sessions.nativeLocation('perplexity','https://www.perplexity.ai/search/another-thread'),/changed/);
+});

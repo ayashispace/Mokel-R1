@@ -83,7 +83,12 @@ const cloudOrigin=deploymentUrl?(()=>{try{return new URL(deploymentUrl).origin}c
 const ALLOWED_ORIGINS=new Set([...localHosts.map(x=>'http://'+x),...(cloudOrigin?[cloudOrigin]:[]),...(process.env.MOKEL_ALLOWED_ORIGINS||'').split(',').map(x=>x.trim()).filter(Boolean)]);
 const isConnected=id=>Object.hasOwn(settings.keys,id);
 const lookupProvider=id=>provider(id,settings.customProviders);
-const catalogFor=(id,key,base=settings.providerBases[id])=>loadCatalog(id,key,fetch,settings.customProviders,{base});
+const catalogFor=async(id,key,base=settings.providerBases[id])=>{
+ const catalog=await loadCatalog(id,key,fetch,settings.customProviders,{base});
+ for(const model of settings.preferences.manualModels?.[id]||[])
+  if(!catalog.models.some(entry=>entry.id===model.id))catalog.models.push(model);
+ return catalog;
+};
 const publicProvider=p=>({id:p.id,name:p.name,keyUrl:p.keyUrl,custom:!!p.custom,local:!!p.local,moreOnly:!!p.moreOnly,...(p.custom||p.local?{base:settings.providerBases[p.id]||p.base}:{}),connected:isConnected(p.id)});
 const quickProviders=()=>mostUsedProviders([...PROVIDERS,...settings.customProviders].map(publicProvider),settings.providerUsage);
 const revisionKey=a=>JSON.stringify([a.thread,a.pcRevision,a.pcConfig?.kind==='github'?(a.path||''):path.win32.normalize(a.path||'').toLowerCase()]);
@@ -338,12 +343,35 @@ async function apiScoped(req,res,url){
   if(Object.hasOwn(data,'defaultModel')){if(data.defaultModel===null)delete next.defaultModel;else{const p=requireString(data.defaultModel?.provider,80),id=requireString(data.defaultModel?.id,200);lookupProvider(p);if(!isConnected(p))throw Error('Connect the default model’s provider first.');const catalog=models.get(p)||await catalogFor(p,settings.keys[p]);if(!catalog.models.some(m=>m.id===id&&m.supported&&!m.blockedReason))throw Error('Choose an available chat model.');next.defaultModel={provider:p,id};}}
   if(Object.hasOwn(data,'mode')){if(!['api','agent','generator'].includes(data.mode))throw new Error('Choose API, Agent or Generator Mode.');next.mode=data.mode;}
   if(Object.hasOwn(data,'switchTabs')){if(typeof data.switchTabs!=='boolean')throw Error('Choose whether automatic tab switching is enabled.');next.switchTabs=data.switchTabs;}
+  if(Object.hasOwn(data,'recording')){
+   const value=data.recording;
+   if(!value||typeof value.live!=='boolean'||typeof value.continuous!=='boolean'||typeof value.language!=='string'||!/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(value.language))throw Error('Choose a valid recording language and settings.');
+   next.recording={language:value.language,live:value.live,continuous:value.continuous};
+  }
   settings.preferences=next;save();json(res,{preferences:next});return;
  }
  if(url.pathname==='/api/models'&&req.method==='GET'){
   const id=url.searchParams.get('provider');lookupProvider(id);if(!isConnected(id))throw new Error('Connect this provider first.');
   if(url.searchParams.get('refresh')==='1'||!models.has(id))models.set(id,await catalogFor(id,settings.keys[id]));
   json(res,models.get(id));return;
+ }
+ if(url.pathname==='/api/models/manual'&&req.method==='POST'){
+  const data=await body(req,2000),id=requireString(data.provider,80);
+  lookupProvider(id);
+  if(!isConnected(id))throw Error('Connect this provider first.');
+  const modelId=requireString(data.model,200).trim().replace(id==='gemini'?/^models\//:/^$/,'');
+  if(!modelId||/\s|[?#\\]/.test(modelId))throw Error('Enter the exact API model ID from your provider.');
+  const catalog=models.get(id)||await catalogFor(id,settings.keys[id]);
+  const existing=catalog.models.find(model=>model.id===modelId);
+  if(existing?.supported&&!existing.blockedReason){json(res,{model:existing,...catalog});return;}
+  const model={id:modelId,name:modelId,provider:id,kind:'Chat',supported:true,vision:false,status:'ready',manual:true};
+  await generate(id,settings.keys[id],modelId,[{role:'user',text:'Reply OK.'}],false,fetch,settings.customProviders,'',{maxTokens:256});
+  const stored=settings.preferences.manualModels?.[id]||[];
+  settings.preferences.manualModels={...settings.preferences.manualModels,[id]:[...stored.filter(entry=>entry.id!==modelId),model].slice(-50)};
+  const current=models.get(id)||catalog;
+  current.models=[...current.models.filter(entry=>entry.id!==modelId),model];
+  models.set(id,current);save();
+  json(res,{...current,model});
  }
  if(url.pathname==='/api/providers'&&req.method==='POST'){
   const data=await body(req,10000);const id=requireString(data.id,80);const p=lookupProvider(id);const key=p.local?'':p.custom&&data.key===''?'':requireString(data.key,1000);

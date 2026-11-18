@@ -273,6 +273,19 @@ test('local server protects connections, processes attachments, and never saves 
   assert.ok((await (await fetch(base+'/api/provider-shortcuts',{headers})).json()).quickProviders.includes(custom.provider.id));
   assert.match(custom.provider.id,/^custom-/);
   assert.equal(custom.models[0].id,'custom-chat');
+  const manual=await post('/api/models/manual',{provider:custom.provider.id,model:'unlisted-chat'});
+  assert.equal(manual.status,200,JSON.stringify(await manual.clone().json()));
+  assert.equal((await manual.json()).model.id,'unlisted-chat');
+  const invalidManual=await post('/api/models/manual',{provider:custom.provider.id,model:'missing-model'});
+  assert.equal(invalidManual.status,400);
+  const refreshed=await fetch(base+'/api/models?provider='+custom.provider.id+'&refresh=1',{headers});
+  const refreshedModels=(await refreshed.json()).models;
+  assert.ok(refreshedModels.some(model=>model.id==='unlisted-chat'));
+  assert.ok(!refreshedModels.some(model=>model.id==='missing-model'));
+  const recording=await post('/api/settings',{recording:{language:'en-NG',live:true,continuous:false}});
+  assert.deepEqual((await recording.json()).preferences.recording,{language:'en-NG',live:true,continuous:false});
+  assert.equal((await post('/api/settings',{recording:{language:'bad input',live:true,continuous:true}})).status,400);
+
   assert.doesNotMatch(JSON.stringify(custom),/custom-secret/);
   const duplicate=await post('/api/providers/custom',{name:'My test provider',base:'https://custom-provider.test/v1',key:'custom-secret'});
   assert.equal(duplicate.status,400);
@@ -324,7 +337,7 @@ test('local server protects connections, processes attachments, and never saves 
   assert.equal(restored.providers.find(p=>p.id===custom.provider.id).connected,true);
   assert.equal(restored.providers.find(p=>p.id===custom.provider.id).base,'https://custom-provider.test/v1');
   assert.doesNotMatch(JSON.stringify(restored),/custom-secret/);
-  assert.deepEqual(restored.preferences,{systemPrompt:'Shared fixture instructions',zoom:120,mode:'api',defaultModel:{provider:'ollama',id:'local-fixture:3b'}});
+  assert.deepEqual(restored.preferences,{systemPrompt:'Shared fixture instructions',zoom:120,mode:'api',defaultModel:{provider:'ollama',id:'local-fixture:3b'},recording:{language:'en-NG',live:true,continuous:false},manualModels:{[custom.provider.id]:[{id:'unlisted-chat',name:'unlisted-chat',provider:custom.provider.id,kind:'Chat',supported:true,vision:false,status:'ready',manual:true}]}});
   assert.ok(restored.quickProviders.includes(custom.provider.id));
   const afterRestart=await post('/api/chat',{provider:custom.provider.id,model:'custom-chat',messages:[{role:'user',text:'Hello again'}]});
   assert.equal(afterRestart.status,200);
