@@ -154,3 +154,12 @@ test('ChatGPT adopts a saved URL from its provisional first-turn URL only once',
  assert.equal(sessions.nativeLocation('chatgpt',saved).url,saved);
  assert.throws(()=>sessions.nativeLocation('chatgpt',root+'c/39998c98-7a89-40fa-9410-c1fa82c58484'),/changed/);
 });
+
+test('Perplexity one-tap landing adopts one saved session and rejects another',t=>{
+ const {sessions}=fixture(t), start='https://www.perplexity.ai/?login-new=false&login-source=oneTapHome';
+ const {pairing}=sessions.pair({thread:'perplexity-login',site:'custom',url:start,presentation:'external'});
+ sessions.claim(pairing.code,start,origin);
+ const saved='https://www.perplexity.ai/session/4c39f0e5-3506-4eba-a9d2-97534f75ceda';
+ assert.equal(sessions.nativeLocation('perplexity-login',saved).url,saved);
+ assert.throws(()=>sessions.nativeLocation('perplexity-login','https://www.perplexity.ai/session/4c39f0e5-3506-4eba-a9d2-97534f75cedb'),/changed/);
+});
