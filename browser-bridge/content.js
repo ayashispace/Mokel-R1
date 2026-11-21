@@ -115,6 +115,9 @@
  const setupDraftMatches=(el,job)=>{if(job?.kind!=='setup'||!job.legacyText)return false;const normalize=text=>String(text).replace(/Replace SESSION_VALUE with:\s*[0-9a-f-]{36}/gi,'Replace SESSION_VALUE with: CURRENT_SESSION').replace(/\s+/g,' ').trim();return normalize(editorText(el))===normalize(job.legacyText);};
 
  async function send(job){
+  // Copilot collapses pasted paragraph separators. Keep generated control messages readable.
+  const copilotControlMessage=['copilot.com','copilot.microsoft.com'].includes(location.hostname)&&job.submitOnly&&(job.kind==='setup'||job.kind==='results'&&job.text.startsWith('ACTUAL MOKEL R1 RESULTS'));
+  if(copilotControlMessage)job={...job,text:job.text.replace(/(?:\r?\n)+/g,' ')};
   if(busy)throw Object.assign(Error('This chat tab is already answering.'),{retryable:true,submissionAttempted:false});
   const current=new URL(location.href),expected=new URL(job.url);current.hash='';expected.hash='';
   if(!(globalThis.mokelConversationUrl?globalThis.mokelConversationUrl.same(current.href,expected.href):current.href===expected.href))throw Error('The chat tab URL changed. Pair the selected conversation again.');
@@ -199,7 +202,7 @@
      composer.dispatchEvent(new Event('input',{bubbles:true}));
     }else{
      // Browser editing commands update rich-text editors and their input handlers.
-     if(['perplexity.ai','www.perplexity.ai'].includes(location.hostname)&&typeof DataTransfer==='function'&&typeof ClipboardEvent==='function'){
+     if(['perplexity.ai','www.perplexity.ai','copilot.com','copilot.microsoft.com'].includes(location.hostname)&&typeof DataTransfer==='function'&&typeof ClipboardEvent==='function'){
       const clipboardData=new DataTransfer();clipboardData.setData('text/plain',job.text);
       composer.dispatchEvent(new ClipboardEvent('paste',{bubbles:true,cancelable:true,clipboardData}));
      }else{document.execCommand('selectAll',false);document.execCommand('insertText',false,job.text);}
